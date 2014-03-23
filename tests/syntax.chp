@@ -1,0 +1,5 @@
+// This is the start of the file
+
+func main() {
+    echo "hello world!"
+} 
