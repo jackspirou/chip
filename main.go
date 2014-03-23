@@ -2,8 +2,8 @@ package main
 
 import (
 	"bufio"
-	"chp/reader"
-	"chp/support"
+	"chip/reader"
+	"chip/support"
 	"fmt"
 	"os"
 	)
