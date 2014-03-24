@@ -6,4 +6,4 @@ go:
   - tip
 
 before_install:
-  - export GOPATH="$GOPATH:$HOME/gopath/src/github.com/jackspirou:"
+  - export GOPATH="$HOME/gopath/src/github.com/jackspirou/:$GOPATH"
