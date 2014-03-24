@@ -1,7 +1,6 @@
-# 
+#
 # Comments
-# 
+#
 
-all: 
+all:
 	go build
-
