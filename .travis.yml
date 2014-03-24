@@ -8,5 +8,5 @@ go:
 before_script:
   - mkdir -p $TRAVIS_BUILD_DIR/src
   - mkdir -p $TRAVIS_BUILD_DIR/src/chip
-  - mv $TRAVIS_BUILD_DIR/* $TRAVIS_BUILD_DIR/src/chip
+  - mv -v $TRAVIS_BUILD_DIR/* $TRAVIS_BUILD_DIR/src/chip/
   - export GOPATH=$GOPATH:$HOME/gopath/src/github.com/jackspirou/src
