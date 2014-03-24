@@ -2,8 +2,8 @@ package main
 
 import (
 	"bufio"
-	"src/reader"
-	"src/support"
+	"github.com/jackspirou/chip/reader"
+	"github.com/jackspirou/chip/support"
 	"fmt"
 	"os"
 	)

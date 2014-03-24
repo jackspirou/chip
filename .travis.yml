@@ -5,5 +5,5 @@ go:
   - 1.1
   - tip
 
-before_script:
-  - export GOPATH=$GOPATH:$HOME/gopath/src/github.com/jackspirou/chip
+#before_script:
+#  - export GOPATH=$GOPATH:$HOME/gopath/src/github.com/jackspirou/chip
