@@ -6,4 +6,4 @@ go:
   - tip
 
 before_script:
-  - export GOPATH=$GOPATH:$HOME/gopath/src/github.com/jackspirou
+  - export GOPATH=$GOPATH:$HOME/gopath/src/github.com/jackspirou/src
