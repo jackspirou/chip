@@ -7,4 +7,3 @@ go:
 
 before_script:
   - export GOPATH=$GOPATH:$HOME/gopath/src/github.com/jackspirou
-  - export TRAVIS_BUILD_DIR=$TRAVIS_BUILD_DIR/src
