@@ -5,5 +5,5 @@ go:
   - 1.1
   - tip
 
-before_script:
-  - export GOPATH="$HOME/gopath/src/github.com/jackspirou:$GOPATH"
+install:
+  - export GOPATH=$GOPATH:$HOME/gopath/src/github.com/jackspirou/"
