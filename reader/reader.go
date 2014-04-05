@@ -14,7 +14,7 @@
 //
 //      src := bufio.NewReader(file)
 //      r := reader.NewReader(src)
-//			chrs := r.Read()
+//			chrs := r.GoRead()
 //      for chr := range chrs {
 //				if(ch.Error() == nill) {
 //					// do something with chr
@@ -95,7 +95,7 @@ import (
 		return r
 	}
 
-	func (r *Reader) Read() chan *Char {
+	func (r *Reader) GoRead() chan *Char {
 		go r.run()
 		return r.chars
 	}

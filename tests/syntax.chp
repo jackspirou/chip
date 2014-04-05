@@ -1,5 +1,8 @@
-// This is the start of the file
+// This is a hello world example.
+package main
+
+import "fmt"
 
 func main() {
-    echo "hello world!"
-} 
+    fmt.Println("Hello, 世界")
+}

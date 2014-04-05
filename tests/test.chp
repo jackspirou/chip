@@ -1,0 +1,79 @@
+
+#  MAKE TABLE. Make a table of factorials in ARRAY.
+
+// comment
+
+
+[]string foo
+
+int temple = 19
+
+/*
+*
+* That statement above was meant to fool you
+*/
+
+func makeTable([]int array) int {
+    int count = 1
+
+    []string foo2 = 0
+
+  count = 0
+  while count < 10 {
+    array[count] = factorial(count)
+    count = count + 1
+    }
+}
+
+#  FACTORIAL. Return the factorial of NUMBER.
+
+func factorial(int number) int {
+    if number == 0 {
+        value 1
+    }else{
+        value number * factorial(number - 1)
+    }
+
+    if number == 0 {
+        writeString("In IF")
+    }else if number == 0 {
+        writeString("In Else If")
+    }else{
+        writeString("In Else")
+    }
+}
+
+#  MAIN. Main program. Fill TABLE with factorials, then print it.
+
+[10]int table
+
+func main() int {
+    int index
+    makeTable(table)
+    index = 0
+    while index < 10 {
+        writeInteger(index)
+        writeString("   ")
+        writeInteger(table[index])
+        writeString("\n")
+        index = index + 1
+    }
+}
+
+#  WRITE INTEGER. Write NUMBER to standard output. Return NUMBER.
+
+func writeInteger(int number) int {
+    code "li $v0, 1"
+    code "lw $a0, 0($fp)"
+    code "syscall"
+    code "move $v0, 0($fp)"
+}
+
+#  WRITE STRING. Write MESSAGE to standard output. Return MESSAGE.
+
+func writeString(string message) string {
+    code "li $v0, 4"
+    code "lw $a0, 0($fp)"
+    code "syscall"
+    code "move $v0, 0($fp)"
+}

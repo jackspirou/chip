@@ -22,7 +22,7 @@ import (
 		// Set a buffered reader that takes the source file.
 		src := bufio.NewReader(file)
 		r := reader.NewReader(src)
-		chrs := r.Read()
+		chrs := r.GoRead()
 
 		// Print
 		for chr := range chrs {
