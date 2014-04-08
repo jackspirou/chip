@@ -204,6 +204,7 @@ func (s *Scanner) scan() (tokens.Tokint, string) {
 			panic("scanner.scan(): The following char is unsupported at this time: " + buffer.String())
 		}
 	}
+	panic("not reached") // for go version 1.0.3 compatibility
 }
 
 // Next Identifier.  Set global token to next name.
@@ -272,7 +273,8 @@ func (s *Scanner) nextPeriod() (tokens.Tokint, string) {
 	s.next() // skip '.'
 	if isDigit(s.ch) {
 		return s.nextNumber(true)
-	} else if s.ch == '.' {
+	}
+	if s.ch == '.' {
 		s.next()
 		if s.ch == '.' {
 			s.next()
@@ -280,9 +282,8 @@ func (s *Scanner) nextPeriod() (tokens.Tokint, string) {
 		} else {
 			panic("whats is this?")
 		}
-	} else {
-		return tokens.PERIOD, "."
 	}
+	return tokens.PERIOD, "."
 }
 
 // Next Comma. Parses a ','.
