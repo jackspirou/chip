@@ -1,5 +1,4 @@
-
-#  MAKE TABLE. Make a table of factorials in ARRAY.
+// #  MAKE TABLE. Make a table of factorials in ARRAY.
 
 // comment
 
@@ -16,6 +15,10 @@ int temple = 19
 func makeTable([]int array) int {
     int count = 1
 
+    float fl = 3.45
+    float fl2 = .42
+    int int45 = 456
+
     []string foo2 = 0
 
   count = 0
@@ -25,7 +28,7 @@ func makeTable([]int array) int {
     }
 }
 
-#  FACTORIAL. Return the factorial of NUMBER.
+// #  FACTORIAL. Return the factorial of NUMBER.
 
 func factorial(int number) int {
     if number == 0 {
@@ -43,7 +46,7 @@ func factorial(int number) int {
     }
 }
 
-#  MAIN. Main program. Fill TABLE with factorials, then print it.
+// #  MAIN. Main program. Fill TABLE with factorials, then print it.
 
 [10]int table
 
@@ -60,7 +63,7 @@ func main() int {
     }
 }
 
-#  WRITE INTEGER. Write NUMBER to standard output. Return NUMBER.
+// #  WRITE INTEGER. Write NUMBER to standard output. Return NUMBER.
 
 func writeInteger(int number) int {
     code "li $v0, 1"
@@ -69,7 +72,7 @@ func writeInteger(int number) int {
     code "move $v0, 0($fp)"
 }
 
-#  WRITE STRING. Write MESSAGE to standard output. Return MESSAGE.
+// #  WRITE STRING. Write MESSAGE to standard output. Return MESSAGE.
 
 func writeString(string message) string {
     code "li $v0, 4"

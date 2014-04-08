@@ -2,25 +2,32 @@ package main
 
 import (
 	"bufio"
-	"github.com/jackspirou/chip/reader"
+	"github.com/jackspirou/chip/scanner"
 	"github.com/jackspirou/chip/support"
-	"fmt"
 	"os"
-	)
+	"fmt"
+)
 
-	func main() {
-		path := "tests/syntax.chp"
+func main() {
+	path := "tests/test.chp"
+	fmt.Println(path)
 
-		// Open a new file and check for errors.
-		file, err := os.Open(path)
-		support.Check(err)
-		defer file.Close()
+	// Open a new file and check for errors.
+	file, err := os.Open(path)
+	support.Check(err)
+	defer file.Close()
 
-		fmt.Println("Printing File: " + file.Name())
-		fmt.Println("")
+	// Set a buffered reader that takes the source file.
+	src := bufio.NewReader(file)
+	s := scanner.NewScanner(src)
+	toks := s.GoScan()
 
-		// Set a buffered reader that takes the source file.
-		src := bufio.NewReader(file)
+	for tok := range toks {
+		fmt.Println(tok)
+	}
+
+
+/*
 		r := reader.NewReader(src)
 		chrs := r.GoRead()
 
@@ -30,4 +37,5 @@ import (
 				fmt.Printf("%c", chr.Rune())
 			}
 		}
-	}
+*/
+}

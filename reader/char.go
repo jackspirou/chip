@@ -21,20 +21,26 @@
 
 package reader
 
+import "unicode/utf8"
+
 // A Reader implements reading of Unicode characters and tokens from an io.Reader.
 type Char struct {
-  chr rune
-  err error
+	chr rune
+	err error
 }
 
 func NewChar(chr rune, err error) *Char {
-  return &Char{chr: chr, err: err,}
+	return &Char{chr: chr, err: err}
+}
+
+func (c *Char) ReadRune() (r rune, size int, err error) {
+	return c.chr, utf8.RuneLen(c.chr), nil
 }
 
 func (c *Char) Rune() rune {
-  return c.chr
+	return c.chr
 }
 
 func (c *Char) Error() error {
-  return c.err
+	return c.err
 }
