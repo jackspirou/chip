@@ -14,7 +14,6 @@ import (
 	"github.com/jackspirou/chip/reader"
 	"github.com/jackspirou/chip/tokens"
 	"io"
-	"unicode"
 )
 
 type Scanner struct {
@@ -61,26 +60,6 @@ func (s *Scanner) run() {
 	close(s.toks)
 }
 
-func isWhitespace(ch rune) bool {
-	return ch == ' ' || ch == '\t'
-}
-
-func isEndOfLine(ch rune) bool {
-	return ch == '\n' || ch == '\r'
-}
-
-func isLetter(ch rune) bool {
-	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' || ch >= 0x80 && unicode.IsLetter(ch)
-}
-
-func isDigit(ch rune) bool {
-	return '0' <= ch && ch <= '9' || ch >= 0x80 && unicode.IsDigit(ch)
-}
-
-func isLetterOrDigit(ch rune) bool {
-	return isLetter(ch) || isDigit(ch)
-}
-
 func (s *Scanner) next() rune {
 	chr, ok := <-s.chrs
 	if !ok {
@@ -106,6 +85,7 @@ func (s *Scanner) skipSpaces() {
 	s.ch = ch
 }
 
+// Scanner method helpers
 func (s *Scanner) switch2(tok0, tok1 tokens.Tokint) (tokens.Tokint, string) {
 	if s.ch == '=' {
 		s.next()

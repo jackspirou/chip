@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	path := "tests/test.chp"
+	path := "tests/gcd.chp"
 	fmt.Println(path)
 
 	// Open a new file and check for errors.

@@ -1,53 +1,71 @@
-//
-// SNARL/PASS TWO. Performs the second pass of the Snarl compiler.
-//
-//		Jack Spirou
-//		1 May 2012
-//
-
-// PASS TWO. Performs the second pass of the Snarl compiler.
-
 package parser
 
 import (
-	"jak/common"
-	"jak/generator"
-	"jak/scanner"
-	"jak/typ"
+	"github.com/jackspirou/chip/scanner"
+	"github.com/jackspirou/chip/tokens"
+	"fmt"
 )
 
-var scan *scanner.Scanner    // Integer value for the current token.
-var symboltable *SymbolTable //
-var massie *Massie
-var generate *generator.Generator //
-var allocate *generator.Allocator // Allocator.
-var intType *typ.BasicType
-var stringType *typ.BasicType
-
-func Parse(path string) {
-	source := scanner.NewSource(path)
-	scan = scanner.NewScanner(source)
-	symboltable = NewSymbolTable()
-	symboltable.Push()
-	massie = NewMassie()
-	allocate = generator.NewAllocator()
-	generate = generator.NewGenerator(path)
-	intType = typ.NewBasicType(common.INT)
-	stringType = typ.NewBasicType(common.STRING)
-	// p.global = NewGlobal()
-	nextProgram()
+// The parser structure holds the parser's internal state.
+type Parser struct {
+	src   io.Reader
+	scanr *scanner.Scanner
+  token *tokens.Token
+	tok   tokens.Tokint
+	toks  chan *tokens.Token
+	tacs  chan *tacs.TAC
+	err   error
 }
 
-// Next Program. Parse a source file.
-func nextProgram() {
-	common.Enter("nextProgram")
-	generate.Emit(".text")
-	for scan.GetToken() != common.EndFileToken {
-		if scan.GetToken() == common.BoldFuncToken {
-			nextProcedure()
+func NewParser(src io.Reader) *Parser {
+	p := &Parser{
+		src:   src,
+		scanr: scanner.NewScanner(src),
+    token: *tokens.Token,
+		tok:   tokens.EOF, // current Char
+		toks:  make(chan *tokens.Token),
+		tacs:  make(chan *tacs.TAC),
+		err:   nil, // no errors yet
+	}
+	p.toks = p.scanr.GoScan()
+	return p
+}
+
+func (p *Parser) GoParse() {
+	go p.run()
+	// return p.toks
+}
+
+func (p *Parser) run() {
+	p.next()
+	// tac := p.parse()
+	p.parse()
+	/*
+	for tac != tacs.EOP {
+		p.tacs <- tacs.NewTac(tok, lit, s.pos, s.err)
+		if p.err == nil {
+			tac = p.parse()
 		} else {
-			nextDeclaration()
+			tac = tacs.EOP
 		}
 	}
-	common.Exit("nextProgram")
+	p.tacs <- tacs.NewTak(tok, lit, s.pos, s.err)
+	*/
+	close(p.tacs)
+}
+
+func (p *Parser) next() tokens.Tokint {
+	token, ok := <-p.toks
+	if !ok {
+		panic("parser.next(): error with channel.")
+	}
+	if token.Error() != nil {
+		panic("parser.next(): scanner sent parser this error: " + token.Error().Error())
+	}
+	p.tok = token.Int()
+	return p.tok
+}
+
+func (p *Parser) parse() {
+	fmt.Prinln("did it.");
 }

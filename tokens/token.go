@@ -15,3 +15,7 @@ func NewToken(tok Tokint, lit string, pos Position, err error) *Token {
 func (t *Token) String() string {
 	return t.tok.String() + ": " + t.lit
 }
+
+func (t *Token) Int() Tokint {
+	return t.tok
+}
