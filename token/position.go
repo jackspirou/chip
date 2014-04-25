@@ -1,4 +1,4 @@
-package tokens
+package token
 
 // A source position is represented by a Position value.
 // A position is valid if Line > 0.

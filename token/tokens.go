@@ -2,12 +2,13 @@
 // programming language and basic operations on tokens (printing, predicates).
 //
 
-package tokens
+package token
 
 // The list of tokens.
 const (
 	// Special tokens
 	ILLEGAL Tokint = iota
+	ERROR
 	EOF            // end of file
 	COMMENT        // "//" or "/* */"
 
@@ -117,7 +118,7 @@ const (
 
 var tokens = [...]string{
 	ILLEGAL: "ILLEGAL",
-
+	ERROR: "ERROR",
 	EOF:     "EOF",
 	COMMENT: "COMMENT",
 

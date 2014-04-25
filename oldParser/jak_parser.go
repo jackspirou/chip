@@ -7,7 +7,7 @@
 
 // PASS TWO. Performs the second pass of the Snarl compiler.
 
-package parser
+package oldParser
 
 import (
 	"jak/common"

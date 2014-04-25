@@ -12,7 +12,7 @@ package scanner
 import (
 	"bytes"
 	"github.com/jackspirou/chip/reader"
-	"github.com/jackspirou/chip/tokens"
+	"github.com/jackspirou/chip/token"
 	"io"
 )
 
@@ -20,9 +20,10 @@ type Scanner struct {
 	src  io.Reader
 	rdr  *reader.Reader
 	ch   rune
-	pos  tokens.Position
-	chrs chan *reader.Char
-	toks chan *tokens.Token
+	pos  token.Position
+	chrs chan rune
+	errs chan error
+	toks chan *token.Tok
 	err  error
 }
 
@@ -30,17 +31,18 @@ func NewScanner(src io.Reader) *Scanner {
 	s := &Scanner{
 		src:  src,
 		rdr:  reader.NewReader(src),
-		ch:   reader.EOF,               // current Char
-		pos:  tokens.NewPosition(1, 0), // default to first line
-		chrs: make(chan *reader.Char),
-		toks: make(chan *tokens.Token),
+		ch:   reader.EOF,              // current Char
+		pos:  token.NewPosition(1, 0), // default to first line
+		chrs: make(chan rune),
+		errs: make(chan error),
+		toks: make(chan *token.Tok),
 		err:  nil, // no errors yet
 	}
-	s.chrs = s.rdr.GoRead()
+	s.chrs, s.errs = s.rdr.GoRead()
 	return s
 }
 
-func (s *Scanner) GoScan() chan *tokens.Token {
+func (s *Scanner) GoScan() chan *token.Tok {
 	go s.run()
 	return s.toks
 }
@@ -48,45 +50,55 @@ func (s *Scanner) GoScan() chan *tokens.Token {
 func (s *Scanner) run() {
 	s.next()
 	tok, lit := s.scan()
-	for tok != tokens.EOF {
-		s.toks <- tokens.NewToken(tok, lit, s.pos, s.err)
-		if s.err == nil {
-			tok, lit = s.scan()
+	for tok != token.EOF {
+		if tok == token.ERROR {
+			if s.err != nil {
+				lit = s.err.Error()
+			}
+			s.toks <- token.NewTok(tok, lit, s.pos)
+			tok = token.EOF
+			lit = token.EOF.String()
 		} else {
-			tok = tokens.EOF
+			s.toks <- token.NewTok(tok, lit, s.pos)
+			tok, lit = s.scan()
 		}
 	}
-	s.toks <- tokens.NewToken(tok, lit, s.pos, s.err)
+	s.toks <- token.NewTok(tok, lit, s.pos)
 	close(s.toks)
 }
 
 func (s *Scanner) next() rune {
-	chr, ok := <-s.chrs
-	if !ok {
-		panic("scanner.next(): error with channel.")
+	select {
+	case ch := <-s.chrs:
+		s.ch = ch
+		s.pos.Column++
+		return s.ch
+	case err := <-s.errs:
+		s.err = err
+		// flush reader channel for EOF.
+		for ch := range s.chrs {
+			s.ch = ch
+		}
+		if s.ch != reader.EOF {
+			// Reader's last character wasn't EOF.  Reader has a bug...
+			panic("CHIP BUG: The reader package's last character was not EOF.")
+		}
+		return s.ch
 	}
-	if chr.Error() != nil {
-		panic("scanner.next(): reader sent scanner this error: " + chr.Error().Error())
-	}
-	s.ch = chr.Rune()
-	s.pos.Column++
-	return s.ch
 }
 
 func (s *Scanner) skipSpaces() {
-	ch := s.ch
-	for isWhitespace(ch) || isEndOfLine(ch) {
-		if isEndOfLine(ch) {
+	for isWhitespace(s.ch) || isEndOfLine(s.ch) {
+		if isEndOfLine(s.ch) {
 			s.pos.Line++
 			s.pos.Column = 0
 		}
-		ch = s.next()
+		s.next()
 	}
-	s.ch = ch
 }
 
 // Scanner method helpers
-func (s *Scanner) switch2(tok0, tok1 tokens.Tokint) (tokens.Tokint, string) {
+func (s *Scanner) switch2(tok0, tok1 token.Tokint) (token.Tokint, string) {
 	if s.ch == '=' {
 		s.next()
 		return tok1, tok1.String()
@@ -94,7 +106,7 @@ func (s *Scanner) switch2(tok0, tok1 tokens.Tokint) (tokens.Tokint, string) {
 	return tok0, tok0.String()
 }
 
-func (s *Scanner) switch3(tok0, tok1 tokens.Tokint, ch2 rune, tok2 tokens.Tokint) (tokens.Tokint, string) {
+func (s *Scanner) switch3(tok0, tok1 token.Tokint, ch2 rune, tok2 token.Tokint) (token.Tokint, string) {
 	if s.ch == '=' {
 		s.next()
 		return tok1, tok1.String()
@@ -106,7 +118,7 @@ func (s *Scanner) switch3(tok0, tok1 tokens.Tokint, ch2 rune, tok2 tokens.Tokint
 	return tok0, tok0.String()
 }
 
-func (s *Scanner) switch4(tok0, tok1 tokens.Tokint, ch2 rune, tok2, tok3 tokens.Tokint) (tokens.Tokint, string) {
+func (s *Scanner) switch4(tok0, tok1 token.Tokint, ch2 rune, tok2, tok3 token.Tokint) (token.Tokint, string) {
 	if s.ch == '=' {
 		s.next()
 		return tok1, tok1.String()
@@ -123,7 +135,7 @@ func (s *Scanner) switch4(tok0, tok1 tokens.Tokint, ch2 rune, tok2, tok3 tokens.
 }
 
 // scan.  Scan the next ch Rune.
-func (s *Scanner) scan() (tokens.Tokint, string) {
+func (s *Scanner) scan() (token.Tokint, string) {
 	s.skipSpaces()
 	switch ch := s.ch; {
 	case isLetter(ch):
@@ -179,57 +191,55 @@ func (s *Scanner) scan() (tokens.Tokint, string) {
 		case '|':
 			return s.nextPipe()
 		default:
-			buffer := bytes.NewBufferString("")
-			buffer.WriteRune(ch)
-			panic("scanner.scan(): The following char is unsupported at this time: " + buffer.String())
+			return token.ERROR, "Unexpected " + string(ch)
 		}
 	}
 	panic("not reached") // for go version 1.0.3 compatibility
 }
 
 // Next Identifier.  Set global token to next name.
-func (s *Scanner) nextIdentifier() (tokens.Tokint, string) {
+func (s *Scanner) nextIdentifier() (token.Tokint, string) {
 	buffer := bytes.NewBufferString("")
 	for isLetterOrDigit(s.ch) {
 		buffer.WriteRune(s.ch)
 		s.next()
 	}
-	s.next()
+	// s.next() - bug? only working because of whitespaces?
 	lit := buffer.String()
 	if len(lit) > 1 {
-		return tokens.Lookup(lit), lit
+		return token.Lookup(lit), lit
 	}
-	return tokens.IDENT, lit
+	return token.IDENT, lit
 }
 
 // Next Number.
-func (s *Scanner) nextNumber(isDecimal bool) (tokens.Tokint, string) {
+func (s *Scanner) nextNumber(isDecimal bool) (token.Tokint, string) {
 	if isDecimal {
 		buffer := bytes.NewBufferString(".")
 		for isDigit(s.ch) {
 			buffer.WriteRune(s.ch)
 			s.next()
 		}
-		return tokens.FLOAT, buffer.String()
+		return token.FLOAT, buffer.String()
 	}
-	tok := tokens.INT
+	tok := token.INT
 	buffer := bytes.NewBufferString("")
 	for isDigit(s.ch) || s.ch == '.' {
 		buffer.WriteRune(s.ch)
 		if s.ch == '.' {
-			tok = tokens.FLOAT
+			tok = token.FLOAT
 		}
 		s.next()
 	}
 	return tok, buffer.String()
 }
 
-func (s *Scanner) nextEOF() (tokens.Tokint, string) {
-	return tokens.EOF, "EOF"
+func (s *Scanner) nextEOF() (token.Tokint, string) {
+	return token.EOF, token.EOF.String()
 }
 
 // Next String Constant. Parse a string constant.
-func (s *Scanner) nextString() (tokens.Tokint, string) {
+func (s *Scanner) nextString() (token.Tokint, string) {
 	buffer := bytes.NewBufferString("")
 	s.next() // skip '"'
 	for s.ch != '"' && !isEndOfLine(s.ch) {
@@ -237,19 +247,19 @@ func (s *Scanner) nextString() (tokens.Tokint, string) {
 		s.next()
 	}
 	if s.ch != '"' {
-		panic("String has no closing quote.")
+		return token.ERROR, "String has no closing quote."
 	}
 	s.next()
-	return tokens.STRING, buffer.String()
+	return token.STRING, buffer.String()
 }
 
 // Next Colon. Parses a ':'.
-func (s *Scanner) nextColon() (tokens.Tokint, string) {
+func (s *Scanner) nextColon() (token.Tokint, string) {
 	s.next() // skip ':'
-	return s.switch2(tokens.COLON, tokens.DEFINE)
+	return s.switch2(token.COLON, token.DEFINE)
 }
 
-func (s *Scanner) nextPeriod() (tokens.Tokint, string) {
+func (s *Scanner) nextPeriod() (token.Tokint, string) {
 	s.next() // skip '.'
 	if isDigit(s.ch) {
 		return s.nextNumber(true)
@@ -258,84 +268,84 @@ func (s *Scanner) nextPeriod() (tokens.Tokint, string) {
 		s.next()
 		if s.ch == '.' {
 			s.next()
-			return tokens.ELLIPSIS, "..."
+			return token.ELLIPSIS, "..."
 		} else {
-			panic("whats is this?")
+			return token.ERROR, "Unexpected " + string(s.ch)
 		}
 	}
-	return tokens.PERIOD, "."
+	return token.PERIOD, token.PERIOD.String()
 }
 
 // Next Comma. Parses a ','.
-func (s *Scanner) nextComma() (tokens.Tokint, string) {
+func (s *Scanner) nextComma() (token.Tokint, string) {
 	s.next()
-	return tokens.COMMA, ","
+	return token.COMMA, token.COMMA.String()
 }
 
 // Next Open Paren. Parse a '('.
-func (s *Scanner) nextOpenParen() (tokens.Tokint, string) {
+func (s *Scanner) nextOpenParen() (token.Tokint, string) {
 	s.next()
-	return tokens.LPAREN, "("
+	return token.LPAREN, token.LPAREN.String()
 }
 
 // Next Close Paren. Parses a ')'.
-func (s *Scanner) nextCloseParen() (tokens.Tokint, string) {
+func (s *Scanner) nextCloseParen() (token.Tokint, string) {
 	s.next()
-	return tokens.RPAREN, ")"
+	return token.RPAREN, token.RPAREN.String()
 }
 
 // Next Open Bracket. Parses a '['.
-func (s *Scanner) nextOpenBracket() (tokens.Tokint, string) {
+func (s *Scanner) nextOpenBracket() (token.Tokint, string) {
 	s.next()
-	return tokens.LBRACK, "["
+	return token.LBRACK, token.LBRACK.String()
 }
 
 // Next Close Bracket. Parses a ']'.
-func (s *Scanner) nextCloseBracket() (tokens.Tokint, string) {
+func (s *Scanner) nextCloseBracket() (token.Tokint, string) {
 	s.next()
-	return tokens.RBRACK, "]"
+	return token.RBRACK, token.RBRACK.String()
 }
 
 // Next Open Brace. Parses a '{'.
-func (s *Scanner) nextOpenBrace() (tokens.Tokint, string) {
+func (s *Scanner) nextOpenBrace() (token.Tokint, string) {
 	s.next()
-	return tokens.LBRACE, "{"
+	return token.LBRACE, token.LBRACE.String()
 }
 
 // Next Close Brace. Parses a '}'.
-func (s *Scanner) nextCloseBrace() (tokens.Tokint, string) {
+func (s *Scanner) nextCloseBrace() (token.Tokint, string) {
 	s.next()
-	return tokens.RBRACE, "]"
+	return token.RBRACE, token.RBRACE.String()
 }
 
 // Next Plus. Parse a '+'.
-func (s *Scanner) nextPlus() (tokens.Tokint, string) {
+func (s *Scanner) nextPlus() (token.Tokint, string) {
 	s.next() // skip '+'
-	return s.switch3(tokens.ADD, tokens.ADD_ASSIGN, '+', tokens.INC)
+	return s.switch3(token.ADD, token.ADD_ASSIGN, '+', token.INC)
 }
 
 // Next Dash. Parses a '-'.
-func (s *Scanner) nextDash() (tokens.Tokint, string) {
+func (s *Scanner) nextDash() (token.Tokint, string) {
 	s.next() // skip '-'
-	return s.switch3(tokens.SUB, tokens.SUB_ASSIGN, '-', tokens.DEC)
+	return s.switch3(token.SUB, token.SUB_ASSIGN, '-', token.DEC)
 }
 
 // Next Star. Parse a '*'.
-func (s *Scanner) nextStar() (tokens.Tokint, string) {
+func (s *Scanner) nextStar() (token.Tokint, string) {
 	s.next() // skip '*'
-	return s.switch2(tokens.MUL, tokens.MUL_ASSIGN)
+	return s.switch2(token.MUL, token.MUL_ASSIGN)
 }
 
 // Next Slash. Parse a '/'.
-func (s *Scanner) nextSlash() (tokens.Tokint, string) {
+func (s *Scanner) nextSlash() (token.Tokint, string) {
 	s.next() // skip '/'
 	if s.ch == '/' || s.ch == '*' {
 		return s.nextComment()
 	}
-	return s.switch2(tokens.QUO, tokens.QUO_ASSIGN)
+	return s.switch2(token.QUO, token.QUO_ASSIGN)
 }
 
-func (s *Scanner) nextComment() (tokens.Tokint, string) {
+func (s *Scanner) nextComment() (token.Tokint, string) {
 	// '/' already consumed
 	buffer := bytes.NewBufferString("")
 	if s.ch == '/' {
@@ -345,7 +355,7 @@ func (s *Scanner) nextComment() (tokens.Tokint, string) {
 			buffer.WriteRune(s.ch)
 			s.next()
 		}
-		return tokens.COMMENT, buffer.String()
+		return token.COMMENT, buffer.String()
 	}
 	if s.ch == '*' {
 		/*- style comment */
@@ -354,67 +364,67 @@ func (s *Scanner) nextComment() (tokens.Tokint, string) {
 		s.next()
 		for s.ch != reader.EOF {
 			if ch == '*' && s.ch == '/' {
-				return tokens.COMMENT, buffer.String()
+				return token.COMMENT, buffer.String()
 			}
 			buffer.WriteRune(ch)
 			ch = s.ch
 			s.next()
 		}
-		panic("comment not terminated")
+		return token.ERROR, "Comment is never terminated"
 	}
 	panic("not reached")
 }
 
-func (s *Scanner) nextPercent() (tokens.Tokint, string) {
+func (s *Scanner) nextPercent() (token.Tokint, string) {
 	s.next()
-	return s.switch2(tokens.REM, tokens.REM_ASSIGN)
+	return s.switch2(token.REM, token.REM_ASSIGN)
 }
 
-func (s *Scanner) nextCaret() (tokens.Tokint, string) {
+func (s *Scanner) nextCaret() (token.Tokint, string) {
 	s.next()
-	return s.switch2(tokens.XOR, tokens.XOR_ASSIGN)
+	return s.switch2(token.XOR, token.XOR_ASSIGN)
 }
 
 // Next Less. Parse a '<'.
-func (s *Scanner) nextLess() (tokens.Tokint, string) {
+func (s *Scanner) nextLess() (token.Tokint, string) {
 	s.next()
 	if s.ch == '-' {
 		s.next()
-		return tokens.ARROW, "<-"
+		return token.ARROW, token.ARROW.String()
 	}
-	return s.switch4(tokens.LSS, tokens.LEQ, '<', tokens.SHL, tokens.SHL_ASSIGN)
+	return s.switch4(token.LSS, token.LEQ, '<', token.SHL, token.SHL_ASSIGN)
 }
 
 // Next Greater. Parse a '>'.
-func (s *Scanner) nextGreater() (tokens.Tokint, string) {
+func (s *Scanner) nextGreater() (token.Tokint, string) {
 	s.next()
-	return s.switch4(tokens.GTR, tokens.GEQ, '>', tokens.SHR, tokens.SHR_ASSIGN)
+	return s.switch4(token.GTR, token.GEQ, '>', token.SHR, token.SHR_ASSIGN)
 }
 
 // Next Equal. Parse a '='.
-func (s *Scanner) nextEqual() (tokens.Tokint, string) {
+func (s *Scanner) nextEqual() (token.Tokint, string) {
 	s.next()
-	return s.switch2(tokens.ASSIGN, tokens.EQL)
+	return s.switch2(token.ASSIGN, token.EQL)
 }
 
 // Next Bang. Parse a '!'.
-func (s *Scanner) nextBang() (tokens.Tokint, string) {
+func (s *Scanner) nextBang() (token.Tokint, string) {
 	s.next()
-	return s.switch2(tokens.NOT, tokens.NEQ)
+	return s.switch2(token.NOT, token.NEQ)
 }
 
 // Next Ampersand. Parse a '&'.
-func (s *Scanner) nextAmpersand() (tokens.Tokint, string) {
+func (s *Scanner) nextAmpersand() (token.Tokint, string) {
 	s.next()
 	if s.ch == '^' {
 		s.next()
-		return s.switch2(tokens.AND_NOT, tokens.AND_NOT_ASSIGN)
+		return s.switch2(token.AND_NOT, token.AND_NOT_ASSIGN)
 	}
-	return s.switch3(tokens.AND, tokens.AND_ASSIGN, '&', tokens.LAND)
+	return s.switch3(token.AND, token.AND_ASSIGN, '&', token.LAND)
 }
 
 // Next Pipe. Parse a '|'.
-func (s *Scanner) nextPipe() (tokens.Tokint, string) {
+func (s *Scanner) nextPipe() (token.Tokint, string) {
 	s.next()
-	return s.switch3(tokens.OR, tokens.OR_ASSIGN, '|', tokens.LOR)
+	return s.switch3(token.OR, token.OR_ASSIGN, '|', token.LOR)
 }

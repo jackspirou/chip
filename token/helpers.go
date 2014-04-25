@@ -1,4 +1,4 @@
-package tokens
+package token
 
 // Lookup maps an identifier to its keyword token or IDENT (if not a keyword).
 func Lookup(ident string) Tokint {

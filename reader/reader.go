@@ -28,9 +28,7 @@ package reader
 
 import (
 	"errors"
-	"fmt"
 	"io"
-	"os"
 	"unicode/utf8"
 )
 
@@ -40,7 +38,10 @@ const EOF = -1
 // A Reader implements reading of Unicode characters and tokens from an io.Reader.
 type Reader struct {
 	// Channel of runes
-	chars chan *Char
+	chrs chan rune
+
+	// Channel of errors
+	errs chan error
 
 	// Input
 	src io.Reader
@@ -52,40 +53,27 @@ type Reader struct {
 
 	// Source position
 	srcBufOffset int // byte offset of srcBuf[0] in source
-	line         int // line count
-	column       int // character count
-	lastLineLen  int // length of last line in characters (for correct column reporting)
-	lastCharLen  int // length of last character in bytes
 
 	// One character look-ahead
-	chr rune // character before current srcPos
-
-	// Last error
-	err error
+	ch rune // character before current srcPos
 }
 
 // NewReader initializes a Scanner with a new source and returns s.
 // Error is set to nil, ErrorCount is set to 0, Mode is set to GoTokens.
 func NewReader(src io.Reader) *Reader {
 	r := &Reader{
-		chars: make(chan *Char),
-		src:   src,
+		chrs: make(chan rune),
+		errs: make(chan error),
+		src:  src,
 
 		srcPos: 0,
 		srcEnd: 0,
 
 		// initialize source position
 		srcBufOffset: 0,
-		line:         1,
-		column:       0,
-		lastLineLen:  0,
-		lastCharLen:  0,
 
 		// initialize one character look-ahead
-		chr: -1, // no char read yet
-
-		// No errors yet
-		err: nil,
+		ch: EOF, // no char read yet
 	}
 
 	// initialize source buffer
@@ -95,23 +83,19 @@ func NewReader(src io.Reader) *Reader {
 	return r
 }
 
-func (r *Reader) GoRead() chan *Char {
+func (r *Reader) GoRead() (chan rune, chan error) {
 	go r.run()
-	return r.chars
+	return r.chrs, r.errs
 }
 
 func (r *Reader) run() {
-	chr := r.read()
-	for chr != EOF {
-		r.chars <- NewChar(chr, r.err)
-		if r.err != nil {
-			chr = EOF
-		} else {
-			chr = r.read()
-		}
+	ch := r.read()
+	for ch != EOF {
+		r.chrs <- ch
+		ch = r.read()
 	}
-	r.chars <- NewChar(chr, r.err)
-	close(r.chars)
+	r.chrs <- ch
+	close(r.chrs)
 }
 
 // next reads and returns the next Unicode character. It is designed such
@@ -119,9 +103,9 @@ func (r *Reader) run() {
 // case (one test to check for both ASCII and end-of-buffer, and one test
 // to check for newlines).
 func (r *Reader) next() rune {
-	chr, width := rune(r.srcBuf[r.srcPos]), 1
+	ch, width := rune(r.srcBuf[r.srcPos]), 1
 
-	if chr >= utf8.RuneSelf {
+	if ch >= utf8.RuneSelf {
 		// uncommon case: not ASCII or not enough bytes
 		for r.srcPos+utf8.UTFMax > r.srcEnd && !utf8.FullRune(r.srcBuf[r.srcPos:r.srcEnd]) {
 			// not enough bytes: read some more
@@ -140,15 +124,11 @@ func (r *Reader) next() rune {
 			r.srcBuf[r.srcEnd] = utf8.RuneSelf // sentinel
 			if err != nil {
 				if r.srcEnd == 0 {
-					if r.lastCharLen > 0 {
-						// previous character was not EOF
-						r.column++
-					}
-					r.lastCharLen = 0
 					return EOF
 				}
 				if err != io.EOF {
-					r.err = err
+					r.errs <- err
+					return EOF
 				}
 				// If err == EOF, we won't be getting more
 				// bytes; break to avoid infinite loop. If
@@ -158,38 +138,30 @@ func (r *Reader) next() rune {
 			}
 		}
 		// at least one byte
-		chr = rune(r.srcBuf[r.srcPos])
-		if chr >= utf8.RuneSelf {
+		ch = rune(r.srcBuf[r.srcPos])
+		if ch >= utf8.RuneSelf {
 			// uncommon case: not ASCII
-			chr, width = utf8.DecodeRune(r.srcBuf[r.srcPos:r.srcEnd])
-			if chr == utf8.RuneError && width == 1 {
+			ch, width = utf8.DecodeRune(r.srcBuf[r.srcPos:r.srcEnd])
+			if ch == utf8.RuneError && width == 1 {
 				// advance for correct error position
 				r.srcPos += width
-				r.lastCharLen = width
-				r.column++
-				r.err = errors.New("illegal UTF-8 encoding")
-				return chr
+				r.errs <- errors.New("illegal UTF-8 encoding")
+				return EOF
 			}
 		}
 	}
 
 	// advance
 	r.srcPos += width
-	r.lastCharLen = width
-	r.column++
 
 	// special situations
-	switch chr {
-	case 0:
+	if ch == 0 {
 		// for compatibility with other tools
-		r.err = errors.New("illegal character NUL")
-	case '\n':
-		r.line++
-		r.lastLineLen = r.column
-		r.column = 0
+		r.errs <- errors.New("illegal character NUL")
+		return EOF
 	}
 
-	return chr
+	return ch
 }
 
 // Next reads and returns the next Unicode character.
@@ -199,29 +171,21 @@ func (r *Reader) next() rune {
 // update the Scanner's Position field; use Pos() to
 // get the current position.
 func (r *Reader) read() rune {
-	chr := r.peek()
-	r.chr = r.next()
-	return chr
+	ch := r.peek()
+	r.ch = r.next()
+	return ch
 }
 
 // Peek returns the next Unicode character in the source without advancing
 // the Reader. It returns EOF if the scanner's position is at the last
 // character of the source.
 func (r *Reader) peek() rune {
-	if r.chr < 0 {
+	if r.ch < 0 {
 		// this code is only run for the very first character
-		r.chr = r.next()
-		if r.chr == '\uFEFF' {
-			r.chr = r.next() // ignore BOM
+		r.ch = r.next()
+		if r.ch == '\uFEFF' {
+			r.ch = r.next() // ignore BOM
 		}
 	}
-	return r.chr
-}
-
-func (r *Reader) PrintErr() {
-	fmt.Fprintf(os.Stderr, "%s: \n", r.err.Error())
-}
-
-func (r *Reader) PrintErrMsg(msg string) {
-	fmt.Fprintf(os.Stderr, "%s: \n", msg)
+	return r.ch
 }

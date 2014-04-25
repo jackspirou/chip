@@ -2,7 +2,9 @@ package parser
 
 import (
 	"github.com/jackspirou/chip/scanner"
-	"github.com/jackspirou/chip/tokens"
+	"github.com/jackspirou/chip/token"
+	"github.com/jackspirou/chip/tacs"
+	"io"
 	"fmt"
 )
 
@@ -10,10 +12,9 @@ import (
 type Parser struct {
 	src   io.Reader
 	scanr *scanner.Scanner
-  token *tokens.Token
-	tok   tokens.Tokint
-	toks  chan *tokens.Token
-	tacs  chan *tacs.TAC
+	tok   *token.Tok
+	toks  chan *token.Tok
+	tacs  chan *tacs.Tac
 	err   error
 }
 
@@ -21,10 +22,9 @@ func NewParser(src io.Reader) *Parser {
 	p := &Parser{
 		src:   src,
 		scanr: scanner.NewScanner(src),
-    token: *tokens.Token,
-		tok:   tokens.EOF, // current Char
-		toks:  make(chan *tokens.Token),
-		tacs:  make(chan *tacs.TAC),
+    tok:   token.NewEndTok(),
+		toks:  make(chan *token.Tok),
+		tacs:  make(chan *tacs.Tac),
 		err:   nil, // no errors yet
 	}
 	p.toks = p.scanr.GoScan()
@@ -32,40 +32,33 @@ func NewParser(src io.Reader) *Parser {
 }
 
 func (p *Parser) GoParse() {
+	p.parse()
 	go p.run()
 	// return p.toks
 }
 
 func (p *Parser) run() {
-	p.next()
-	// tac := p.parse()
-	p.parse()
-	/*
-	for tac != tacs.EOP {
-		p.tacs <- tacs.NewTac(tok, lit, s.pos, s.err)
-		if p.err == nil {
-			tac = p.parse()
-		} else {
-			tac = tacs.EOP
-		}
+	tok := p.next()
+	for (tok.Typ() != token.EOF) {
+		fmt.Println(tok)
+		tok = p.next()
 	}
-	p.tacs <- tacs.NewTak(tok, lit, s.pos, s.err)
-	*/
+	fmt.Println(tok)
 	close(p.tacs)
 }
 
-func (p *Parser) next() tokens.Tokint {
-	token, ok := <-p.toks
+func (p *Parser) next() *token.Tok {
+	tok, ok := <-p.toks
 	if !ok {
 		panic("parser.next(): error with channel.")
 	}
-	if token.Error() != nil {
-		panic("parser.next(): scanner sent parser this error: " + token.Error().Error())
+	if tok.Typ() == token.ERROR {
+		panic("parser.next(): scanner sent parser this error: " + tok.String())
 	}
-	p.tok = token.Int()
+	p.tok = tok
 	return p.tok
 }
 
 func (p *Parser) parse() {
-	fmt.Prinln("did it.");
+	fmt.Println("did it.");
 }

@@ -2,7 +2,7 @@ package tacs
 
 const (
 	/* Variable declaration */
-	DECLARE_LONG Takint = iota
+	DECLARE_LONG Tacint = iota
 	DECLARE_DOUBLE
 	DECLARE_BOOLEAN
 	DECLARE_STRING
