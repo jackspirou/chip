@@ -85,6 +85,7 @@ func (s *Scanner) next() rune {
 		}
 		return s.ch
 	}
+	panic("not reached")
 }
 
 func (s *Scanner) skipSpaces() {
