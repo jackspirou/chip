@@ -1,7 +1,7 @@
-package settings
+package config
 
 //  Constant Flags & Globals
 const (
-  tracing = false    //  Enable or disable ENTER/EXIT.
+  Tracing = false    //  Enable or disable ENTER/EXIT.
   EOFChar = '\u0000' //  End of source sentinel.
 )

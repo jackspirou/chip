@@ -3,7 +3,8 @@ package parser
 import (
 	"github.com/jackspirou/chip/scanner"
 	"github.com/jackspirou/chip/token"
-	"github.com/jackspirou/chip/tacs"
+	"github.com/jackspirou/chip/bytecode"
+	"github.com/jackspirou/chip/config"
 	"io"
 	"fmt"
 )
@@ -12,53 +13,50 @@ import (
 type Parser struct {
 	src   io.Reader
 	scanr *scanner.Scanner
-	tok   *token.Tok
+	token *token.Tok
+	tok   token.Tokint
 	toks  chan *token.Tok
 	tacs  chan *tacs.Tac
 	err   error
+	level int //  Parser recursion level.
 }
 
 func NewParser(src io.Reader) *Parser {
 	p := &Parser{
 		src:   src,
 		scanr: scanner.NewScanner(src),
-    tok:   token.NewEndTok(),
+		token: token.NewEndTok(),
+    tok:   0,
 		toks:  make(chan *token.Tok),
 		tacs:  make(chan *tacs.Tac),
 		err:   nil, // no errors yet
+		level: 0,
 	}
 	p.toks = p.scanr.GoScan()
 	return p
 }
 
 func (p *Parser) GoParse() {
-	p.parse()
 	go p.run()
-	// return p.toks
+	return p.toks
 }
 
 func (p *Parser) run() {
-	tok := p.next()
-	for (tok.Typ() != token.EOF) {
-		fmt.Println(tok)
-		tok = p.next()
-	}
-	fmt.Println(tok)
-	close(p.tacs)
-}
-
-func (p *Parser) next() *token.Tok {
-	tok, ok := <-p.toks
-	if !ok {
-		panic("parser.next(): error with channel.")
-	}
-	if tok.Typ() == token.ERROR {
-		panic("parser.next(): scanner sent parser this error: " + tok.String())
-	}
-	p.tok = tok
-	return p.tok
+	p.next()
+	p.parse()
+	close(s.toks)
 }
 
 func (p *Parser) parse() {
-	fmt.Println("did it.");
+	p.nextFile();
+}
+
+func (p *Parser) next() token.Tokint {
+	token, ok := <-p.toks
+	if !ok {
+		panic("parser.next(): error with channel.")
+	}
+	p.token = token
+	p.tok = token.Typ()
+	return p.tok
 }

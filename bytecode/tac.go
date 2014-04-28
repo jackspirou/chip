@@ -1,6 +1,6 @@
-package tacs
+package bytecode
 
-type Tac struct {
+type tac struct {
   err error
 }
 

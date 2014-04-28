@@ -19,7 +19,7 @@ func NewEndTok() *Tok {
 }
 
 func (t *Tok) String() string {
-	return t.typ.String() + ": " + t.lit
+	return t.lit
 }
 
 func (t *Tok) Typ() Tokint {

@@ -1,8 +1,10 @@
-package tacs
+package bytecode
+
+type Op int
 
 const (
 	/* Variable declaration */
-	DECLARE_LONG Tacint = iota
+	DECLARE_LONG Op = iota
 	DECLARE_DOUBLE
 	DECLARE_BOOLEAN
 	DECLARE_STRING
@@ -76,8 +78,4 @@ const (
 
 	/* I/O */
 	PRINT_STRING
-
-	/* FAKE */
-	EOP
-	FOO
 )

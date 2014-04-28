@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"github.com/jackspirou/chip/scanner"
-	"github.com/jackspirou/chip/support"
+	"github.com/jackspirou/chip/helper"
 	"os"
 	"fmt"
 )
@@ -14,7 +14,7 @@ func main() {
 
 	// Open a new file and check for errors.
 	file, err := os.Open(path)
-	support.Check(err)
+	helper.Check(err)
 	defer file.Close()
 
 	// Set a buffered reader that takes the source file.
