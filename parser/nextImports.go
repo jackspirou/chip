@@ -10,24 +10,24 @@ func (p *Parser) nextImports() {
     p.next() // skip '('
     for p.tok != token.RPAREN {
       if p.tok == token.IDENT {
-        p.token.String() // get package alias
+        p.lit // get package alias
         p.next()
-        p.token.String() // get package src
+        p.lit // get package src
         p.nextExpected(token.STRING)
       }else{
-        p.token.String() // get package src
+        p.lit // get package src
         p.nextExpected(token.STRING)
       }
     }
     p.nextExpected(token.RPAREN)
   }else{
     if p.tok == token.IDENT {
-      p.token.String() // get package alias
+      p.lit // get package alias
       p.next()
-      p.token.String() // get package src
+      p.lit // get package src
       p.nextExpected(token.STRING)
     }else{
-      p.token.String() // get package src
+      p.lit // get package src
       p.nextExpected(token.STRING)
     }
   }

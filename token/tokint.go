@@ -66,6 +66,8 @@ func (tok Tokint) IsLiteral() bool { return literal_beg < tok && tok < literal_e
 //
 func (tok Tokint) IsOperator() bool { return operator_beg < tok && tok < operator_end }
 
+func (tok Tokint) IsAssignment() bool { return (assign_beg < tok && tok < assign_end) || tok == ASSIGN || tok == INC || tok == DEC}
+
 // IsKeyword returns true for tokens corresponding to keywords;
 // it returns false otherwise.
 //

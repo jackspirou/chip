@@ -7,9 +7,9 @@ func (p *Parser) nextProgram() {
   p.enter()
   for p.tok != token.EOF {
     if p.tok == token.FUNC {
-      p.nextProc()
+      p.nextProcedure()
     }else{
-      p.nextDec()
+      p.nextStatement()
     }
   }
   p.exit()

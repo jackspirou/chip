@@ -3,8 +3,6 @@ package parser
 import (
 	"github.com/jackspirou/chip/scanner"
 	"github.com/jackspirou/chip/token"
-	"github.com/jackspirou/chip/bytecode"
-	"github.com/jackspirou/chip/config"
 	"io"
 	"fmt"
 )
@@ -15,6 +13,7 @@ type Parser struct {
 	scanr *scanner.Scanner
 	token *token.Tok
 	tok   token.Tokint
+	lit	 string
 	toks  chan *token.Tok
 	tacs  chan *tacs.Tac
 	err   error
@@ -58,5 +57,6 @@ func (p *Parser) next() token.Tokint {
 	}
 	p.token = token
 	p.tok = token.Typ()
+	p.lit = token.String()
 	return p.tok
 }

@@ -6,7 +6,7 @@ import "github.com/jackspirou/chip/token"
 func (p *Parser) nextPackage() {
   p.enter()
   p.nextExpected(token.PACKAGE)
-  p.token.String() // get package name
+  p.lit // get package name
   p.nextExpected(token.IDENT)
   p.exit()
 }

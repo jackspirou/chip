@@ -38,6 +38,7 @@ const (
 	SHR     // >>
 	AND_NOT // &^
 
+	assign_beg
 	ADD_ASSIGN // +=
 	SUB_ASSIGN // -=
 	MUL_ASSIGN // *=
@@ -50,6 +51,7 @@ const (
 	SHL_ASSIGN     // <<=
 	SHR_ASSIGN     // >>=
 	AND_NOT_ASSIGN // &^=
+	assign_end
 
 	LAND  // &&
 	LOR   // ||
