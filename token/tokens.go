@@ -105,6 +105,7 @@ const (
 	IMPORT // import
 
 	INTERFACE // interfact
+	IOTA 		 // iota
 	MAP       // map
 	PACKAGE   // package
 	RANGE     // range
@@ -206,6 +207,7 @@ var tokens = [...]string{
 	IMPORT: "import",
 
 	INTERFACE: "interface",
+	IOTA: 		 "itoa",
 	MAP:       "map",
 	PACKAGE:   "package",
 	RANGE:     "range",

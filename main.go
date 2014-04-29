@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/jackspirou/chip/helper"
-	"github.com/jackspirou/chip/scanner"
+	"github.com/jackspirou/chip/parser"
 	"os"
 )
 
@@ -19,13 +19,6 @@ func main() {
 
 	// Set a buffered reader that takes the source file.
 	src := bufio.NewReader(file)
-	scanr := scanner.NewScanner(src)
-	toks := scanr.GoScan()
-
-	for tok := range toks {
-		fmt.Println(tok)
-	}
-
-	// p := parser.NewParser(src)
-	// p.GoParse()
+	parser := parser.NewParser(src)
+	parser.GoParse()
 }
