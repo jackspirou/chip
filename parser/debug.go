@@ -33,7 +33,6 @@ func traceDebug() string {
 		methodPath := runtime.FuncForPC(pc).Name()
 		methodPathSlice := strings.Split(methodPath, ".")
 		return methodPathSlice[len(methodPathSlice)-1]
-	}else{
-		return "unknown"
 	}
+	return "unknown"
 }
