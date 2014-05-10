@@ -19,8 +19,8 @@ func (p *Parser) nextUnit() {
 				}
 			}
 			p.nextExpected(token.RPAREN)
-		} else {
-			p.nextExpected(token.LBRACK)
+		} else if p.tok == token.LBRACK {
+			p.next()
 			p.nextExpression()
 			p.nextExpected(token.RBRACK)
 		}

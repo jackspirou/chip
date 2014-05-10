@@ -9,6 +9,11 @@ func (p *Parser) nextStatement() {
 	case token.IDENT:
 		//p.lit // var or proc name
 		p.next()
+		for p.tok == token.PERIOD {
+			p.next() // skip '.'
+			//p.lit // var or proc name
+			p.nextExpected(token.IDENT)
+		}
 		if p.tok.IsAssignment() {
 			p.nextAssignment()
 		} else {
@@ -31,25 +36,25 @@ func (p *Parser) nextStatement() {
 				}
 				p.nextExpected(token.RPAREN)
 			default:
-				panic("Expected an assignment or declaration, not a '"+p.lit+"'")
+				panic("Expected an assignment or declaration, not a '" + p.lit + "'")
 			}
 		}
 	case token.IF:
 		p.nextIf()
 	/*
-	case token.FOR:
-		p.nextFor()
+		case token.FOR:
+			p.nextFor()
 	*/
 	case token.RETURN:
 		p.nextReturn()
 	/*
-	case token.SWITCH:
-		p.nextSwitch()
+		case token.SWITCH:
+			p.nextSwitch()
 	*/
 	case token.CONST:
 		p.nextConstant()
 	default:
-		panic("Statement Expected, not a '"+p.lit+"'")
+		panic("Statement Expected, not a '" + p.lit + "'")
 	}
 	p.exit()
 }

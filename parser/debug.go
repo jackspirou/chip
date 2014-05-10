@@ -13,7 +13,7 @@ import (
 func (p *Parser) enter() {
 	if config.Tracing {
 		helper.WriteBlanks(p.level)
-		fmt.Println("Enter " + traceDebug())
+		fmt.Println("Enter " + debug())
 		p.level += 4
 	}
 }
@@ -23,11 +23,11 @@ func (p *Parser) exit() {
 	if config.Tracing {
 		p.level -= 4
 		helper.WriteBlanks(p.level)
-		fmt.Println("Exit  " + traceDebug())
+		fmt.Println("Exit  " + debug())
 	}
 }
 
-func traceDebug() string {
+func debug() string {
 	pc, _, _, ok := runtime.Caller(2)
 	if ok {
 		methodPath := runtime.FuncForPC(pc).Name()

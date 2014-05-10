@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"github.com/jackspirou/chip/scanner"
 	"github.com/jackspirou/chip/token"
 	"io"
@@ -42,9 +43,13 @@ func (p *Parser) GoParse() {
 }
 
 func (p *Parser) run() {
+	start := time.Now()
 	p.next()
 	p.parse()
-	close(p.toks)
+	// close(p.toks)
+	end := time.Now()
+	duration := end.Sub(start)
+	fmt.Println(duration)
 }
 
 func (p *Parser) parse() {
