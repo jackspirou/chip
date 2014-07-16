@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"github.com/jackspirou/chip/token"
+	"github.com/JackSpirou/chip/token"
 )
 
 // Next Expected. Expects argument as the next token.

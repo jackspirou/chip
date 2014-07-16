@@ -1,6 +1,6 @@
 package parser
 
-import "github.com/jackspirou/chip/token"
+import "github.com/JackSpirou/chip/token"
 
 // Next Program. Parse the file (program) body.
 func (p *Parser) nextProgram() {

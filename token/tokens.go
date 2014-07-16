@@ -9,8 +9,8 @@ const (
 	// Special tokens
 	ILLEGAL Tokint = iota
 	ERROR
-	EOF            // end of file
-	COMMENT        // "//" or "/* */"
+	EOF     // end of file
+	COMMENT // "//" or "/* */"
 
 	literal_beg
 	// Identifiers and basic type literals
@@ -105,7 +105,7 @@ const (
 	IMPORT // import
 
 	INTERFACE // interfact
-	IOTA 		 // iota
+	IOTA      // iota
 	MAP       // map
 	PACKAGE   // package
 	RANGE     // range
@@ -121,7 +121,7 @@ const (
 
 var tokens = [...]string{
 	ILLEGAL: "ILLEGAL",
-	ERROR: "ERROR",
+	ERROR:   "ERROR",
 	EOF:     "EOF",
 	COMMENT: "COMMENT",
 
@@ -207,7 +207,7 @@ var tokens = [...]string{
 	IMPORT: "import",
 
 	INTERFACE: "interface",
-	IOTA: 		 "itoa",
+	IOTA:      "itoa",
 	MAP:       "map",
 	PACKAGE:   "package",
 	RANGE:     "range",

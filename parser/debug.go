@@ -2,8 +2,8 @@ package parser
 
 import (
 	"fmt"
-	"github.com/jackspirou/chip/config"
-	"github.com/jackspirou/chip/helper"
+	"github.com/JackSpirou/chip/config"
+	"github.com/JackSpirou/chip/helper"
 	//"reflect"
 	"runtime"
 	"strings"

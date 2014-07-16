@@ -1,6 +1,6 @@
 package parser
 
-import "github.com/jackspirou/chip/token"
+import "github.com/JackSpirou/chip/token"
 
 // Next Declaration. Parse a declaration.
 func (p *Parser) nextDeclaration() {

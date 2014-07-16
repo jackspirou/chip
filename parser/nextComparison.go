@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"github.com/jackspirou/chip/token"
+	"github.com/JackSpirou/chip/token"
 )
 
 // Next Comparison. Parse a comparison.

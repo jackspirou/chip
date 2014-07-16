@@ -3,8 +3,8 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/jackspirou/chip/helper"
-	"github.com/jackspirou/chip/parser"
+	"github.com/JackSpirou/chip/helper"
+	"github.com/JackSpirou/chip/parser"
 	"os"
 )
 

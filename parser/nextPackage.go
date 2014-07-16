@@ -1,6 +1,6 @@
 package parser
 
-import "github.com/jackspirou/chip/token"
+import "github.com/JackSpirou/chip/token"
 
 // Next Package. Parse a package name.
 func (p *Parser) nextPackage() {

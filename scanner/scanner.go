@@ -11,8 +11,8 @@ package scanner
 
 import (
 	"bytes"
-	"github.com/jackspirou/chip/reader"
-	"github.com/jackspirou/chip/token"
+	"github.com/JackSpirou/chip/reader"
+	"github.com/JackSpirou/chip/token"
 	"io"
 )
 

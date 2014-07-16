@@ -2,8 +2,10 @@ package parser
 
 import (
 	"fmt"
-	"github.com/jackspirou/chip/scanner"
-	"github.com/jackspirou/chip/token"
+	"github.com/JackSpirou/chip/scanner"
+	"github.com/JackSpirou/chip/scope"
+	"github.com/JackSpirou/chip/ssa"
+	"github.com/JackSpirou/chip/token"
 	"io"
 	"time"
 )
@@ -16,9 +18,11 @@ type Parser struct {
 	tok   token.Tokint
 	lit   string
 	toks  chan *token.Tok
+	alloc *ssa.Allocator
 	// tacs  chan *tacs.Tac
 	err   error
 	level int //  Parser recursion level.
+	scope *scope.Scope
 }
 
 func NewParser(src io.Reader) *Parser {
@@ -28,17 +32,21 @@ func NewParser(src io.Reader) *Parser {
 		tokn:  token.NewEndTok(),
 		tok:   0,
 		toks:  make(chan *token.Tok),
+		alloc: ssa.NewAllocator(),
 		// tacs:  make(chan *tacs.Tac),
 		err:   nil, // no errors yet
 		level: 0,
+		scope: scope.NewScope(),
 	}
 	p.toks = p.scanr.GoScan()
+	p.scope.Open()
 	return p
 }
 
 func (p *Parser) GoParse() {
 	go p.run()
 	time.Sleep(3 * time.Second)
+	fmt.Println(p.scope.String())
 	// return p.toks
 }
 

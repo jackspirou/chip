@@ -1,36 +1,58 @@
 package parser
 
-import "github.com/jackspirou/chip/token"
+import (
+	"fmt"
+	"github.com/JackSpirou/chip/helper"
+	"github.com/JackSpirou/chip/node"
+	"github.com/JackSpirou/chip/ssa"
+	"github.com/JackSpirou/chip/token"
+	"github.com/JackSpirou/chip/typ"
+)
 
 // Next Procedure Signature. Parse a procedure signature.
 func (p *Parser) nextProcedureSignature() {
-  p.enter()
-  p.nextExpected(token.FUNC)
-  //p.lit // proc name
-  p.nextExpected(token.IDENT)
-  p.nextExpected(token.LPAREN)
-  if p.tok != token.RPAREN {
-    //p.lit // param name
-    p.nextExpected(token.IDENT)
-    //p.lit // param type
-    p.nextExpected(token.IDENT)
-    for p.tok == token.COMMA {
-      p.next() // skip ','
-      //p.lit // param name
-      p.nextExpected(token.IDENT)
-      //p.lit // param type
-      p.nextExpected(token.IDENT)
-    }
-  }
-  p.nextExpected(token.RPAREN)
-  if p.tok != token.LBRACE {
-    //p.lit // return type
-    p.nextExpected(token.IDENT)
-    for p.tok == token.COMMA {
-      p.next() // skip ','
-      //p.lit // return type
-      p.nextExpected(token.IDENT)
-    }
-  }
-  p.exit()
+	p.enter()
+	p.nextExpected(token.FUNC)
+	procName := p.lit
+	p.nextExpected(token.IDENT) // skip proc name
+	p.nextExpected(token.LPAREN)
+	proc := typ.NewProcedureType()
+	if p.tok != token.RPAREN {
+		paramName := p.lit
+		p.nextExpected(token.IDENT) // skip param name
+		paramType := p.nextType()
+
+		proc.InsertParam(paramType)
+		reg := p.alloc.Request()
+		paramDes := node.NewRegNode(paramType, reg)
+		p.scope.Insert(paramName, paramDes)
+
+		for p.tok == token.COMMA {
+			p.next() // skip ','
+			paramName = p.lit
+			p.nextExpected(token.IDENT) // skip proc name
+			paramType = p.nextType()
+
+			proc.InsertParam(paramType)
+			reg = p.alloc.Request()
+			paramDes = node.NewRegNode(paramType, reg)
+			p.scope.Insert(paramName, paramDes)
+		}
+	}
+	p.nextExpected(token.RPAREN)
+	if p.tok != token.LBRACE {
+		valueType := p.nextType()
+		proc.InsertValue(valueType)
+		for p.tok == token.COMMA {
+			p.next() // skip ','
+			valueType = p.nextType()
+			proc.InsertValue(valueType)
+		}
+	}
+	label := ssa.NewLabel(procName)
+	des := node.NewLabelNode(proc, label)
+	_, err := p.scope.Global(procName, des)
+	helper.Check(err)
+	fmt.Println(label.String())
+	p.exit()
 }
