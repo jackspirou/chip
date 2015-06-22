@@ -1,29 +1,5 @@
+// Package reader provides a reader to slurp UTF-8 source files.
 //
-//  CHP/READER. Asynchronously read and return characters via a concurrent channel.
-//
-//    Jack Spirou
-//    15 March 14
-//
-
-// Package reader provides a reader for UTF-8-encoded text.
-// It takes an io.Reader providing the file source, then returns the
-// characters of that source via a channel.  If the first character
-// in the source is a UTF-8 encoded byte order mark (BOM), it is discarded.
-//
-// Basic usage pattern:
-//
-//      src := bufio.NewReader(file)
-//      r := reader.NewReader(src)
-//			chrs := r.GoRead()
-//      for chr := range chrs {
-//				if(ch.Error() == nill) {
-//					// do something with chr
-//				}else{
-//					// error out
-//				}
-//      }
-//
-
 package reader
 
 import (
@@ -32,40 +8,43 @@ import (
 	"unicode/utf8"
 )
 
-const bufLen = 1024 // at least utf8.UTFMax
-const EOF = -1
+const (
 
-// A Reader implements reading of Unicode characters and tokens from an io.Reader.
+	// EOF represents an end of file flag
+	EOF = -1
+
+	// buffer should be at least utf8.UTFMax (4) bytes
+	bufLen = 1024
+)
+
+// Reader represents a reader to slup Unicode runes from a chip source file.
 type Reader struct {
-	// Channel of runes
-	chrs chan rune
 
-	// Channel of errors
-	errs chan error
-
-	// Input
+	// input
 	src io.Reader
 
-	// Source buffer
+	// source buffer
 	srcBuf [bufLen + 1]byte // +1 for sentinel for common case of s.next()
 	srcPos int              // reading position (srcBuf index)
 	srcEnd int              // source end (srcBuf index)
 
-	// Source position
-	srcBufOffset int // byte offset of srcBuf[0] in source
+	// source position byte offset of srcBuf[0]
+	srcBufOffset int
 
-	// One character look-ahead
-	ch rune // character before current srcPos
+	// one character look-ahead, char before current srcPos
+	ch rune
 }
 
-// NewReader initializes a Scanner with a new source and returns s.
-// Error is set to nil, ErrorCount is set to 0, Mode is set to GoTokens.
+// NewReader takes an io.Reader and returns a new reader.
 func NewReader(src io.Reader) *Reader {
-	r := &Reader{
-		chrs: make(chan rune),
-		errs: make(chan error),
-		src:  src,
 
+	// create a new reader
+	r := &Reader{
+
+		// set source
+		src: src,
+
+		// default positions to 0
 		srcPos: 0,
 		srcEnd: 0,
 
@@ -83,35 +62,46 @@ func NewReader(src io.Reader) *Reader {
 	return r
 }
 
-func (r *Reader) GoRead() (chan rune, chan error) {
-	go r.run()
-	return r.chrs, r.errs
-}
+// Read returns the next Unicode character in the source and advances
+// the Reader position. It returns EOF if the reader's position is at the last
+// character of the source.
+func (r *Reader) Read() (rune, error) {
 
-func (r *Reader) run() {
-	ch := r.read()
-	for ch != EOF {
-		r.chrs <- ch
-		ch = r.read()
+	// get the next char by peaking ahead
+	ch, err := r.peek()
+
+	// error check
+	if err != nil {
+		return EOF, err
 	}
-	r.chrs <- ch
-	close(r.chrs)
+
+	// advance to the next char
+	char, err := r.next()
+
+	// set the current char equal to the next char
+	r.ch = char
+
+	// return the peak ahead char
+	return ch, err
 }
 
 // next reads and returns the next Unicode character. It is designed such
 // that only a minimal amount of work needs to be done in the common ASCII
 // case (one test to check for both ASCII and end-of-buffer, and one test
 // to check for newlines).
-func (r *Reader) next() rune {
+func (r *Reader) next() (rune, error) {
 	ch, width := rune(r.srcBuf[r.srcPos]), 1
 
 	if ch >= utf8.RuneSelf {
+
 		// uncommon case: not ASCII or not enough bytes
 		for r.srcPos+utf8.UTFMax > r.srcEnd && !utf8.FullRune(r.srcBuf[r.srcPos:r.srcEnd]) {
+
 			// not enough bytes: read some more
 			// move unread bytes to beginning of buffer
 			copy(r.srcBuf[0:], r.srcBuf[r.srcPos:r.srcEnd])
 			r.srcBufOffset += r.srcPos
+
 			// read more bytes
 			// (an io.Reader must return io.EOF when it reaches
 			// the end of what it is reading - simply returning
@@ -124,12 +114,12 @@ func (r *Reader) next() rune {
 			r.srcBuf[r.srcEnd] = utf8.RuneSelf // sentinel
 			if err != nil {
 				if r.srcEnd == 0 {
-					return EOF
+					return EOF, nil
 				}
 				if err != io.EOF {
-					r.errs <- err
-					return EOF
+					return EOF, err
 				}
+
 				// If err == EOF, we won't be getting more
 				// bytes; break to avoid infinite loop. If
 				// err is something else, we don't know if
@@ -137,55 +127,69 @@ func (r *Reader) next() rune {
 				break
 			}
 		}
+
 		// at least one byte
 		ch = rune(r.srcBuf[r.srcPos])
 		if ch >= utf8.RuneSelf {
+
 			// uncommon case: not ASCII
 			ch, width = utf8.DecodeRune(r.srcBuf[r.srcPos:r.srcEnd])
 			if ch == utf8.RuneError && width == 1 {
+
 				// advance for correct error position
 				r.srcPos += width
-				r.errs <- errors.New("illegal UTF-8 encoding")
-				return EOF
+				return EOF, errors.New("illegal UTF-8 encoding")
 			}
 		}
 	}
 
-	// advance
+	// advance the position
 	r.srcPos += width
 
 	// special situations
 	if ch == 0 {
+
 		// for compatibility with other tools
-		r.errs <- errors.New("illegal character NUL")
-		return EOF
+		return EOF, errors.New("illegal character NUL")
 	}
 
-	return ch
-}
-
-// Next reads and returns the next Unicode character.
-// It returns EOF at the end of the source. It reports
-// a read error by calling s.Error, if not nil; otherwise
-// it prints an error message to os.Stderr. Next does not
-// update the Scanner's Position field; use Pos() to
-// get the current position.
-func (r *Reader) read() rune {
-	ch := r.peek()
-	r.ch = r.next()
-	return ch
+	return ch, nil
 }
 
 // Peek returns the next Unicode character in the source without advancing
 // the Reader. It returns EOF if the scanner's position is at the last
 // character of the source.
-func (r *Reader) peek() rune {
+func (r *Reader) peek() (rune, error) {
+
+	// check if this is the first character
 	if r.ch < 0 {
-		// this code is only run for the very first character
-		r.ch = r.next()
+
+		// call next only for the very first character
+		char, err := r.next()
+
+		// error check
+		if err != nil {
+			return EOF, err
+		}
+
+		// set reader char
+		r.ch = char
+
+		// check for BOM
 		if r.ch == '\uFEFF' {
-			r.ch = r.next() // ignore BOM
+
+			// ignore BOM
+			char, err := r.next()
+
+			// error check
+			if err != nil {
+				return EOF, err
+			}
+
+			// set reader char
+			r.ch = char
 		}
 	}
-	return r.ch
+
+	return r.ch, nil
 }
