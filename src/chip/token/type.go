@@ -5,7 +5,7 @@ import "strconv"
 // Type is the set of lexical token types of the chip programming language.
 type Type int
 
-// String returns the string corresponding to the token tok.
+// String returns the string corresponding to the token.
 // For operators, delimiters, and keywords the string is the actual
 // token character sequence (e.g., for the token ADD, the string is
 // "+"). For all other tokens the string corresponds to the token

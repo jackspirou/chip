@@ -10,7 +10,7 @@ type Token struct {
 	pos Pos    // token postion in the source file
 }
 
-// New takes a token type, string literal, and position.  It returns a chip Token.
+// New takes a token type, string literal, and position.  It returns a chip token.
 func New(typ Type, lit string, pos Pos) *Token {
 	return &Token{typ: typ, lit: lit, pos: pos}
 }
