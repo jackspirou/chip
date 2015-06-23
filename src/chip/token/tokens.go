@@ -1,16 +1,13 @@
 package token
 
-// The list of tokens.
+// The list of chip token types.
 const (
-
-	// ILLEGAL and such are special tokens
 	ILLEGAL Type = iota
-	ERROR
-	EOF     // end of file
-	COMMENT // "//" or "/* */"
+	ERROR        // error
+	EOF          // end of file
+	COMMENT      // "//" or "/* */"
 
-	// Identifiers and basic type literals
-	// (these tokens stand for classes of literals)
+	// identifiers and basic type literals, they stand for classes of literals
 	literalBegin
 	IDENT  // main
 	INT    // 12345
@@ -20,7 +17,7 @@ const (
 	STRING // "abc"
 	literalEnd
 
-	// Operators and delimiters
+	// operators and delimiters
 	operatorBegin
 	ADD // +
 	SUB // -
@@ -81,7 +78,7 @@ const (
 	COLON     // :
 	operatorEnd
 
-	// Keywords
+	// keywords
 	keywordBegin
 	BREAK    // break
 	CASE     // case
