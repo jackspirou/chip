@@ -35,8 +35,8 @@ type Reader struct {
 	ch rune
 }
 
-// NewReader takes an io.Reader and returns a new Reader.
-func NewReader(src io.Reader) *Reader {
+// New takes an io.Reader and returns a new Reader.
+func New(src io.Reader) *Reader {
 
 	// create a new reader
 	r := &Reader{
