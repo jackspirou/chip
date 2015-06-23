@@ -1,6 +1,5 @@
 // Package scanner provides a Scanner to read tokens from UTF-8 chip source files.
 //
-
 package scanner
 
 import (
