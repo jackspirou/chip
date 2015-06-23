@@ -20,7 +20,7 @@ func NewEOF() *Token {
 	return New(EOF, "EOF", NewPos(0, 0))
 }
 
-// String turns token.Token into a fmt.Stringer.
+// String turns token.Token into fmt.Stringer.
 func (t *Token) String() string {
 	return t.lit
 }
