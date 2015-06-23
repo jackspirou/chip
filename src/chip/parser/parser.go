@@ -11,14 +11,19 @@ import (
 	"github.com/jackspirou/chip/src/chip/token"
 )
 
-// The parser structure holds the parser's internal state.
+// Parser represents a parser for reading chip source files.
 type Parser struct {
-	src   io.Reader
+
+	// input source
+	src io.Reader
+
+	// file scanner
 	scanr *scanner.Scanner
+
+	//
 	tokn  *token.Tok
 	tok   token.Tokint
 	lit   string
-	toks  chan *token.Tok
 	alloc *ssa.Allocator
 	// tacs  chan *tacs.Tac
 	err   error
@@ -32,14 +37,12 @@ func NewParser(src io.Reader) *Parser {
 		scanr: scanner.NewScanner(src),
 		tokn:  token.NewEndTok(),
 		tok:   0,
-		toks:  make(chan *token.Tok),
 		alloc: ssa.NewAllocator(),
 		// tacs:  make(chan *tacs.Tac),
 		err:   nil, // no errors yet
 		level: 0,
 		scope: scope.NewScope(),
 	}
-	p.toks = p.scanr.GoScan()
 	p.scope.Open()
 	return p
 }

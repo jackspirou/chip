@@ -4,17 +4,17 @@ package token
 type Tok struct {
 	typ Tokint // Type, such as itemNumber.
 	lit string // Value, such as "23.2".
-	pos Position
+	pos Pos
 }
 
-func NewTok(typ Tokint, lit string, pos Position) *Tok {
+func NewTok(typ Tokint, lit string, pos Pos) *Tok {
 	return &Tok{typ: typ, lit: lit, pos: pos}
 }
 
 func NewEndTok() *Tok {
 	typ := EOF
 	lit := "EOF"
-	pos := NewPosition(0, 0)
+	pos := NewPos(0, 0)
 	return NewTok(typ, lit, pos)
 }
 
@@ -33,7 +33,7 @@ type Pos struct {
 	Column int // column number, starting at 1 (character count per line)
 }
 
-func NewPosition(line int, column int) Pos {
+func NewPos(line int, column int) Pos {
 	return Pos{Line: line, Column: column}
 }
 

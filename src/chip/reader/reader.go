@@ -1,4 +1,4 @@
-// Package reader provides a reader to slurp UTF-8 source files.
+// Package reader provides a Reader to slurp UTF-8 runes from source files.
 //
 package reader
 
@@ -20,7 +20,7 @@ const (
 // Reader represents a reader to slup Unicode runes from a chip source file.
 type Reader struct {
 
-	// input
+	// input source
 	src io.Reader
 
 	// source buffer
@@ -35,7 +35,7 @@ type Reader struct {
 	ch rune
 }
 
-// NewReader takes an io.Reader and returns a new reader.
+// NewReader takes an io.Reader and returns a new Reader.
 func NewReader(src io.Reader) *Reader {
 
 	// create a new reader
@@ -45,11 +45,11 @@ func NewReader(src io.Reader) *Reader {
 		src: src,
 
 		// default positions to 0
-		srcPos: 0,
-		srcEnd: 0,
+		// srcPos: 0,
+		// srcEnd: 0,
 
-		// initialize source position
-		srcBufOffset: 0,
+		// initialize source position to 0
+		// srcBufOffset: 0,
 
 		// initialize one character look-ahead
 		ch: EOF, // no char read yet
@@ -68,7 +68,7 @@ func NewReader(src io.Reader) *Reader {
 func (r *Reader) Read() (rune, error) {
 
 	// get the next char by peaking ahead
-	ch, err := r.peek()
+	ch, err := r.Peek()
 
 	// error check
 	if err != nil {
@@ -85,13 +85,54 @@ func (r *Reader) Read() (rune, error) {
 	return ch, err
 }
 
+// Peek returns the next Unicode character in the source without advancing
+// the Reader. It returns EOF if the scanner's position is at the last
+// character of the source.
+func (r *Reader) Peek() (rune, error) {
+
+	// check if this is the first character
+	if r.ch < 0 {
+
+		// call next only for the very first character
+		char, err := r.next()
+
+		// error check
+		if err != nil {
+			return EOF, err
+		}
+
+		// set reader char
+		r.ch = char
+
+		// check for BOM
+		if r.ch == '\uFEFF' {
+
+			// ignore BOM
+			char, err := r.next()
+
+			// error check
+			if err != nil {
+				return EOF, err
+			}
+
+			// set reader char
+			r.ch = char
+		}
+	}
+
+	return r.ch, nil
+}
+
 // next reads and returns the next Unicode character. It is designed such
 // that only a minimal amount of work needs to be done in the common ASCII
 // case (one test to check for both ASCII and end-of-buffer, and one test
 // to check for newlines).
 func (r *Reader) next() (rune, error) {
+
+	// get the char from the buffer
 	ch, width := rune(r.srcBuf[r.srcPos]), 1
 
+	// compare ch to utf8.RuneSelf
 	if ch >= utf8.RuneSelf {
 
 		// uncommon case: not ASCII or not enough bytes
@@ -154,42 +195,4 @@ func (r *Reader) next() (rune, error) {
 	}
 
 	return ch, nil
-}
-
-// Peek returns the next Unicode character in the source without advancing
-// the Reader. It returns EOF if the scanner's position is at the last
-// character of the source.
-func (r *Reader) peek() (rune, error) {
-
-	// check if this is the first character
-	if r.ch < 0 {
-
-		// call next only for the very first character
-		char, err := r.next()
-
-		// error check
-		if err != nil {
-			return EOF, err
-		}
-
-		// set reader char
-		r.ch = char
-
-		// check for BOM
-		if r.ch == '\uFEFF' {
-
-			// ignore BOM
-			char, err := r.next()
-
-			// error check
-			if err != nil {
-				return EOF, err
-			}
-
-			// set reader char
-			r.ch = char
-		}
-	}
-
-	return r.ch, nil
 }

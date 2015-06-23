@@ -1,11 +1,5 @@
+// Package scanner provides a Scanner to read tokens from UTF-8 chip source files.
 //
-// SNARL/SCANNER.
-//
-//		Jack Spirou
-//		1 May 2012
-//
-
-// SCANNER.  Read characters from source and generate tokens.
 
 package scanner
 
@@ -15,83 +9,147 @@ import (
 	"unicode"
 
 	"github.com/jackspirou/chip/src/chip/reader"
+	"github.com/jackspirou/chip/src/chip/token"
 )
 
+// Scanner represents a scanner to read tokens from UTF-8 chip source files.
 type Scanner struct {
-	src  io.Reader
-	rdr  *reader.Reader
-	ch   rune
-	pos  token.Position
-	chrs chan rune
-	errs chan error
-	toks chan *token.Tok
-	err  error
+
+	// input source
+	src io.Reader
+
+	// char reader
+	rdr *reader.Reader
+
+	// current rune, useful for look-ahead
+	ch rune
+
+	// current token position in the source file
+	pos token.Pos
 }
 
+// NewScanner takes an io.Reader and returns a new Scanner.
 func NewScanner(src io.Reader) *Scanner {
+
+	// create a new scanner
 	s := &Scanner{
-		src:  src,
-		rdr:  reader.NewReader(src),
-		ch:   reader.EOF,              // current Char
-		pos:  token.NewPosition(1, 0), // default to first line
-		chrs: make(chan rune),
-		errs: make(chan error),
-		toks: make(chan *token.Tok),
-		err:  nil, // no errors yet
+
+		// set source
+		src: src,
+
+		// create a new source reader
+		rdr: reader.NewReader(src),
+
+		// set current char to EOF
+		ch: reader.EOF,
+
+		// default the position to the first character on the first line
+		pos: token.NewPos(1, 0),
 	}
-	s.chrs, s.errs = s.rdr.GoRead()
+
 	return s
 }
 
-func (s *Scanner) GoScan() chan *token.Tok {
-	go s.run()
-	return s.toks
+// Scan returns the next token and string literal.
+func (s *Scanner) Scan() (token.Tokint, string) {
+
+	// skip any blank spaces
+	s.skipSpaces()
+
+	// letters yeild identifiers
+	if letter(s.ch) {
+		return s.nextIdentifier()
+	}
+
+	// digits yeild numbers
+	if digit(s.ch) {
+		return s.nextNumber(false)
+	}
+
+	// switch on a rune
+	switch s.ch {
+	case reader.EOF:
+		return s.nextEOF()
+	case '"':
+		return s.nextString()
+	case ':':
+		return s.nextColon()
+	case '.':
+		return s.nextPeriod()
+	case ',':
+		return s.nextComma()
+	case '(':
+		return s.nextOpenParen()
+	case ')':
+		return s.nextCloseParen()
+	case '[':
+		return s.nextOpenBracket()
+	case ']':
+		return s.nextCloseBracket()
+	case '{':
+		return s.nextOpenBrace()
+	case '}':
+		return s.nextCloseBrace()
+	case '+':
+		return s.nextPlus()
+	case '-':
+		return s.nextDash()
+	case '*':
+		return s.nextStar()
+	case '/':
+		return s.nextSlash()
+	case '%':
+		return s.nextPercent()
+	case '^':
+		return s.nextCaret()
+	case '<':
+		return s.nextLess()
+	case '>':
+		return s.nextGreater()
+	case '=':
+		return s.nextEqual()
+	case '!':
+		return s.nextBang()
+	case '&':
+		return s.nextAmpersand()
+	case '|':
+		return s.nextPipe()
+	default:
+		return token.ERROR, "unexpected " + string(s.ch)
+	}
 }
 
-func (s *Scanner) run() {
-	s.next()
-	tok, lit := s.scan()
-	for tok != token.EOF {
-		if tok == token.ERROR {
-			if s.err != nil {
-				lit = s.err.Error()
-			}
-			s.toks <- token.NewTok(tok, lit, s.pos)
-			tok = token.EOF
-			lit = token.EOF.String()
-		} else {
-			s.toks <- token.NewTok(tok, lit, s.pos)
-			tok, lit = s.scan()
-		}
-	}
-	s.toks <- token.NewTok(tok, lit, s.pos)
-	close(s.toks)
-}
+// next advances the scanners position, and reads/returns the next char.
+func (s *Scanner) next() error {
 
-func (s *Scanner) next() rune {
-	select {
-	case ch := <-s.chrs:
-		s.ch = ch
-		s.pos.Column++
-		return s.ch
-	case err := <-s.errs:
-		s.err = err
-		// flush reader channel for EOF.
-		for ch := range s.chrs {
-			s.ch = ch
+	// read the next char
+	ch, err := s.rdr.Read()
+
+	// error check
+	if err != nil {
+
+		// check that reader's last char was EOF
+		if ch != reader.EOF {
+
+			// reader has a bug...
+			panic("scanner: the reader's last char should have been EOF, reader has a bug...")
 		}
-		if s.ch != reader.EOF {
-			// Reader's last character wasn't EOF.  Reader has a bug...
-			panic("CHIP BUG: The reader package's last character was not EOF.")
-		}
-		return s.ch
+
+		return err
 	}
-	panic("not reached")
+
+	// set the reader char equal to the scanner char
+	s.ch = ch
+
+	// advance the scanners position
+	s.pos.Column++
+
+	return nil
 }
 
 func (s *Scanner) skipSpaces() {
-	for isWhitespace(s.ch) || isEndOfLine(s.ch) {
-		if isEndOfLine(s.ch) {
+	for whitespace(s.ch) || endOfLine(s.ch) {
+		if endOfLine(s.ch) {
 			s.pos.Line++
 			s.pos.Column = 0
 		}
@@ -136,73 +194,10 @@ func (s *Scanner) switch4(tok0, tok1 token.Tokint, ch2 rune, tok2, tok3 token.To
 	return tok0, tok0.String()
 }
 
-// scan.  Scan the next ch Rune.
-func (s *Scanner) scan() (token.Tokint, string) {
-	s.skipSpaces()
-	switch ch := s.ch; {
-	case isLetter(ch):
-		return s.nextIdentifier()
-	case isDigit(ch):
-		return s.nextNumber(false)
-	default:
-		switch ch {
-		case reader.EOF:
-			return s.nextEOF()
-		case '"':
-			return s.nextString()
-		case ':':
-			return s.nextColon()
-		case '.':
-			return s.nextPeriod()
-		case ',':
-			return s.nextComma()
-		case '(':
-			return s.nextOpenParen()
-		case ')':
-			return s.nextCloseParen()
-		case '[':
-			return s.nextOpenBracket()
-		case ']':
-			return s.nextCloseBracket()
-		case '{':
-			return s.nextOpenBrace()
-		case '}':
-			return s.nextCloseBrace()
-		case '+':
-			return s.nextPlus()
-		case '-':
-			return s.nextDash()
-		case '*':
-			return s.nextStar()
-		case '/':
-			return s.nextSlash()
-		case '%':
-			return s.nextPercent()
-		case '^':
-			return s.nextCaret()
-		case '<':
-			return s.nextLess()
-		case '>':
-			return s.nextGreater()
-		case '=':
-			return s.nextEqual()
-		case '!':
-			return s.nextBang()
-		case '&':
-			return s.nextAmpersand()
-		case '|':
-			return s.nextPipe()
-		default:
-			return token.ERROR, "Unexpected " + string(ch)
-		}
-	}
-	panic("not reached") // for go version 1.0.3 compatibility
-}
-
 // Next Identifier.  Set global token to next name.
 func (s *Scanner) nextIdentifier() (token.Tokint, string) {
 	buffer := bytes.NewBufferString("")
-	for isLetterOrDigit(s.ch) {
+	for letterOrDigit(s.ch) {
 		buffer.WriteRune(s.ch)
 		s.next()
 	}
@@ -215,10 +210,10 @@ func (s *Scanner) nextIdentifier() (token.Tokint, string) {
 }
 
 // Next Number.
-func (s *Scanner) nextNumber(isDecimal bool) (token.Tokint, string) {
-	if isDecimal {
+func (s *Scanner) nextNumber(decimal bool) (token.Tokint, string) {
+	if decimal {
 		buffer := bytes.NewBufferString(".")
-		for isDigit(s.ch) {
+		for digit(s.ch) {
 			buffer.WriteRune(s.ch)
 			s.next()
 		}
@@ -226,7 +221,7 @@ func (s *Scanner) nextNumber(isDecimal bool) (token.Tokint, string) {
 	}
 	tok := token.INT
 	buffer := bytes.NewBufferString("")
-	for isDigit(s.ch) || s.ch == '.' {
+	for digit(s.ch) || s.ch == '.' {
 		buffer.WriteRune(s.ch)
 		if s.ch == '.' {
 			tok = token.FLOAT
@@ -244,7 +239,7 @@ func (s *Scanner) nextEOF() (token.Tokint, string) {
 func (s *Scanner) nextString() (token.Tokint, string) {
 	buffer := bytes.NewBufferString("")
 	s.next() // skip '"'
-	for s.ch != '"' && !isEndOfLine(s.ch) {
+	for s.ch != '"' && !endOfLine(s.ch) {
 		buffer.WriteRune(s.ch)
 		s.next()
 	}
@@ -263,7 +258,7 @@ func (s *Scanner) nextColon() (token.Tokint, string) {
 
 func (s *Scanner) nextPeriod() (token.Tokint, string) {
 	s.next() // skip '.'
-	if isDigit(s.ch) {
+	if digit(s.ch) {
 		return s.nextNumber(true)
 	}
 	if s.ch == '.' {
@@ -353,7 +348,7 @@ func (s *Scanner) nextComment() (token.Tokint, string) {
 	if s.ch == '/' {
 		//- style comment
 		s.next()
-		for !isEndOfLine(s.ch) && s.ch != reader.EOF {
+		for !endOfLine(s.ch) && s.ch != reader.EOF {
 			buffer.WriteRune(s.ch)
 			s.next()
 		}
@@ -431,22 +426,22 @@ func (s *Scanner) nextPipe() (token.Tokint, string) {
 	return s.switch3(token.OR, token.ORAssign, '|', token.LOR)
 }
 
-func isWhitespace(ch rune) bool {
+func whitespace(ch rune) bool {
 	return ch == ' ' || ch == '\t'
 }
 
-func isEndOfLine(ch rune) bool {
+func endOfLine(ch rune) bool {
 	return ch == '\n' || ch == '\r'
 }
 
-func isLetter(ch rune) bool {
+func letter(ch rune) bool {
 	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' || ch >= 0x80 && unicode.IsLetter(ch)
 }
 
-func isDigit(ch rune) bool {
+func digit(ch rune) bool {
 	return '0' <= ch && ch <= '9' || ch >= 0x80 && unicode.IsDigit(ch)
 }
 
-func isLetterOrDigit(ch rune) bool {
-	return isLetter(ch) || isDigit(ch)
+func letterOrDigit(ch rune) bool {
+	return letter(ch) || digit(ch)
 }
