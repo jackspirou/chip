@@ -2,8 +2,8 @@ package token
 
 import "strconv"
 
-// Token is the set of lexical tokens of the Go programming language.
-type Tokint int
+// Type is the set of lexical token types of the chip programming language.
+type Type int
 
 // String returns the string corresponding to the token tok.
 // For operators, delimiters, and keywords the string is the actual
@@ -11,9 +11,9 @@ type Tokint int
 // "+"). For all other tokens the string corresponds to the token
 // constant name (e.g. for the token IDENT, the string is "IDENT").
 //
-func (tok Tokint) String() string {
+func (tok Type) String() string {
 	s := ""
-	if 0 <= tok && tok < Tokint(len(tokens)) {
+	if 0 <= tok && tok < Type(len(tokens)) {
 		s = tokens[tok]
 	}
 	if s == "" {
@@ -38,8 +38,8 @@ const (
 // operator op. If op is not a binary operator, the result
 // is LowestPrecedence.
 //
-func (op Tokint) Precedence() int {
-	switch op {
+func (tok Type) Precedence() int {
+	switch tok {
 	case LOR:
 		return 1
 	case LAND:
@@ -56,21 +56,22 @@ func (op Tokint) Precedence() int {
 
 // Predicates
 
-// IsLiteral returns true for tokens corresponding to identifiers
+// Literal returns true for token types corresponding to identifiers
 // and basic type literals; it returns false otherwise.
 //
-func (tok Tokint) IsLiteral() bool { return literalBegin < tok && tok < literalEnd }
+func (tok Type) Literal() bool { return literalBegin < tok && tok < literalEnd }
 
-// IsOperator returns true for tokens corresponding to operators and
+// Operator returns true for token types corresponding to operators and
 // delimiters; it returns false otherwise.
 //
-func (tok Tokint) IsOperator() bool { return operatorBegin < tok && tok < operatorEnd }
+func (tok Type) Operator() bool { return operatorBegin < tok && tok < operatorEnd }
 
-func (tok Tokint) IsAssignment() bool {
+// Assignment returns true for token types corresponding to assignments.
+func (tok Type) Assignment() bool {
 	return (assignBegin < tok && tok < assignEnd) || tok == ASSIGN || tok == INC || tok == DEC
 }
 
-// IsKeyword returns true for tokens corresponding to keywords;
+// Keyword returns true for token types corresponding to keywords;
 // it returns false otherwise.
 //
-func (tok Tokint) IsKeyword() bool { return keywordBegin < tok && tok < keywordEnd }
+func (tok Type) Keyword() bool { return keywordBegin < tok && tok < keywordEnd }

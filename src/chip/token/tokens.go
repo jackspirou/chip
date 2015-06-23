@@ -1,20 +1,17 @@
-// Package token defines constants representing the lexical tokens of the Go
-// programming language and basic operations on tokens (printing, predicates).
-//
-
 package token
 
 // The list of tokens.
 const (
-	// Special tokens
-	ILLEGAL Tokint = iota
+
+	// ILLEGAL and such are special tokens
+	ILLEGAL Type = iota
 	ERROR
 	EOF     // end of file
 	COMMENT // "//" or "/* */"
 
-	literalBegin
 	// Identifiers and basic type literals
 	// (these tokens stand for classes of literals)
+	literalBegin
 	IDENT  // main
 	INT    // 12345
 	FLOAT  // 123.45
@@ -23,8 +20,8 @@ const (
 	STRING // "abc"
 	literalEnd
 
-	operatorBegin
 	// Operators and delimiters
+	operatorBegin
 	ADD // +
 	SUB // -
 	MUL // *
@@ -84,8 +81,8 @@ const (
 	COLON     // :
 	operatorEnd
 
-	keywordBegin
 	// Keywords
+	keywordBegin
 	BREAK    // break
 	CASE     // case
 	CHAN     // chan

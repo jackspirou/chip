@@ -1,48 +1,52 @@
+// Package token defines constants representing the lexical tokens of the chip
+// programming language and basic operations on tokens (printing, predicates).
+//
 package token
 
-// Item represents a token returned from the scanner.
-type Tok struct {
-	typ Tokint // Type, such as itemNumber.
-	lit string // Value, such as "23.2".
-	pos Pos
+// Token represents a chip token.
+type Token struct {
+	typ Type   // token type
+	lit string // token string value, e.g. "23.2"
+	pos Pos    // token postion in the source file
 }
 
-func NewTok(typ Tokint, lit string, pos Pos) *Tok {
+// New takes a token type, string literal, and position.  It returns a chip Token.
+func New(typ Type, lit string, pos Pos) *Token {
 	return &Tok{typ: typ, lit: lit, pos: pos}
 }
 
-func NewEndTok() *Tok {
-	typ := EOF
-	lit := "EOF"
-	pos := NewPos(0, 0)
-	return NewTok(typ, lit, pos)
+// NewEndTok returns a chip "EOF" token.
+func NewEndTok() *Token {
+	return NewTok(EOF, "EOF", NewPos(0, 0))
 }
 
-func (t *Tok) String() string {
+// String turns token.Token into a fmt.Stringer.
+func (t *Token) String() string {
 	return t.lit
 }
 
-func (t *Tok) Typ() Tokint {
+// Type returns a token type.
+func (t *Token) Type() Type {
 	return t.typ
 }
 
-// A source position is represented by a Position value.
-// A position is valid if Line > 0.
+// Pos represents a position in a source file.  A Pos value is valid if Line > 0.
 type Pos struct {
 	Line   int // line number, starting at 1
 	Column int // column number, starting at 1 (character count per line)
 }
 
+// NewPos takes a line and column.  It returns a Pos.
 func NewPos(line int, column int) Pos {
 	return Pos{Line: line, Column: column}
 }
 
-// IsValid returns true if the position is valid.
-func (pos Pos) IsValid() bool { return pos.Line > 0 }
+// Valid checks if the Pos is valid.
+func (pos Pos) Valid() bool { return pos.Line > 0 }
 
-// Lookup maps an identifier to its keyword token or IDENT (if not a keyword).
-func Lookup(ident string) Tokint {
-	if tok, is_keyword := keywords[ident]; is_keyword {
+// Lookup finds a keyword token based on an identifier.  If no keyword found it defaults to token.IDENT.
+func Lookup(ident string) Type {
+	if tok, keyword := keywords[ident]; keyword {
 		return tok
 	}
 	return IDENT

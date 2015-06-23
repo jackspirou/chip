@@ -1,4 +1,4 @@
-// Package scanner provides a Scanner to read tokens from UTF-8 chip source files.
+// Package scanner provides a Scanner to slurp chip tokens from UTF-8 source files.
 //
 package scanner
 
@@ -11,7 +11,7 @@ import (
 	"github.com/jackspirou/chip/src/chip/token"
 )
 
-// Scanner represents a scanner to read tokens from UTF-8 chip source files.
+// Scanner represents a scanner to slurp chip tokens from UTF-8 source files.
 type Scanner struct {
 
 	// input source
@@ -50,7 +50,7 @@ func NewScanner(src io.Reader) *Scanner {
 }
 
 // Scan returns the next token and string literal.
-func (s *Scanner) Scan() (token.Tokint, string) {
+func (s *Scanner) Scan() (token.Type, string) {
 
 	// skip any blank spaces
 	s.skipSpaces()
@@ -157,7 +157,7 @@ func (s *Scanner) skipSpaces() {
 }
 
 // Scanner method helpers
-func (s *Scanner) switch2(tok0, tok1 token.Tokint) (token.Tokint, string) {
+func (s *Scanner) switch2(tok0, tok1 token.Type) (token.Type, string) {
 	if s.ch == '=' {
 		s.next()
 		return tok1, tok1.String()
@@ -165,7 +165,7 @@ func (s *Scanner) switch2(tok0, tok1 token.Tokint) (token.Tokint, string) {
 	return tok0, tok0.String()
 }
 
-func (s *Scanner) switch3(tok0, tok1 token.Tokint, ch2 rune, tok2 token.Tokint) (token.Tokint, string) {
+func (s *Scanner) switch3(tok0, tok1 token.Type, ch2 rune, tok2 token.Type) (token.Type, string) {
 	if s.ch == '=' {
 		s.next()
 		return tok1, tok1.String()
@@ -177,7 +177,7 @@ func (s *Scanner) switch3(tok0, tok1 token.Tokint, ch2 rune, tok2 token.Tokint) 
 	return tok0, tok0.String()
 }
 
-func (s *Scanner) switch4(tok0, tok1 token.Tokint, ch2 rune, tok2, tok3 token.Tokint) (token.Tokint, string) {
+func (s *Scanner) switch4(tok0, tok1 token.Type, ch2 rune, tok2, tok3 token.Type) (token.Type, string) {
 	if s.ch == '=' {
 		s.next()
 		return tok1, tok1.String()
@@ -194,7 +194,7 @@ func (s *Scanner) switch4(tok0, tok1 token.Tokint, ch2 rune, tok2, tok3 token.To
 }
 
 // Next Identifier.  Set global token to next name.
-func (s *Scanner) nextIdentifier() (token.Tokint, string) {
+func (s *Scanner) nextIdentifier() (token.Type, string) {
 	buffer := bytes.NewBufferString("")
 	for letterOrDigit(s.ch) {
 		buffer.WriteRune(s.ch)
@@ -209,7 +209,7 @@ func (s *Scanner) nextIdentifier() (token.Tokint, string) {
 }
 
 // Next Number.
-func (s *Scanner) nextNumber(decimal bool) (token.Tokint, string) {
+func (s *Scanner) nextNumber(decimal bool) (token.Type, string) {
 	if decimal {
 		buffer := bytes.NewBufferString(".")
 		for digit(s.ch) {
@@ -230,12 +230,12 @@ func (s *Scanner) nextNumber(decimal bool) (token.Tokint, string) {
 	return tok, buffer.String()
 }
 
-func (s *Scanner) nextEOF() (token.Tokint, string) {
+func (s *Scanner) nextEOF() (token.Type, string) {
 	return token.EOF, token.EOF.String()
 }
 
 // Next String Constant. Parse a string constant.
-func (s *Scanner) nextString() (token.Tokint, string) {
+func (s *Scanner) nextString() (token.Type, string) {
 	buffer := bytes.NewBufferString("")
 	s.next() // skip '"'
 	for s.ch != '"' && !endOfLine(s.ch) {
@@ -250,12 +250,12 @@ func (s *Scanner) nextString() (token.Tokint, string) {
 }
 
 // Next Colon. Parses a ':'.
-func (s *Scanner) nextColon() (token.Tokint, string) {
+func (s *Scanner) nextColon() (token.Type, string) {
 	s.next() // skip ':'
 	return s.switch2(token.COLON, token.DEFINE)
 }
 
-func (s *Scanner) nextPeriod() (token.Tokint, string) {
+func (s *Scanner) nextPeriod() (token.Type, string) {
 	s.next() // skip '.'
 	if digit(s.ch) {
 		return s.nextNumber(true)
@@ -265,75 +265,74 @@ func (s *Scanner) nextPeriod() (token.Tokint, string) {
 		if s.ch == '.' {
 			s.next()
 			return token.ELLIPSIS, "..."
-		} else {
-			return token.ERROR, "Unexpected " + string(s.ch)
 		}
+		return token.ERROR, "Unexpected " + string(s.ch)
 	}
 	return token.PERIOD, token.PERIOD.String()
 }
 
 // Next Comma. Parses a ','.
-func (s *Scanner) nextComma() (token.Tokint, string) {
+func (s *Scanner) nextComma() (token.Type, string) {
 	s.next()
 	return token.COMMA, token.COMMA.String()
 }
 
 // Next Open Paren. Parse a '('.
-func (s *Scanner) nextOpenParen() (token.Tokint, string) {
+func (s *Scanner) nextOpenParen() (token.Type, string) {
 	s.next()
 	return token.LPAREN, token.LPAREN.String()
 }
 
 // Next Close Paren. Parses a ')'.
-func (s *Scanner) nextCloseParen() (token.Tokint, string) {
+func (s *Scanner) nextCloseParen() (token.Type, string) {
 	s.next()
 	return token.RPAREN, token.RPAREN.String()
 }
 
 // Next Open Bracket. Parses a '['.
-func (s *Scanner) nextOpenBracket() (token.Tokint, string) {
+func (s *Scanner) nextOpenBracket() (token.Type, string) {
 	s.next()
 	return token.LBRACK, token.LBRACK.String()
 }
 
 // Next Close Bracket. Parses a ']'.
-func (s *Scanner) nextCloseBracket() (token.Tokint, string) {
+func (s *Scanner) nextCloseBracket() (token.Type, string) {
 	s.next()
 	return token.RBRACK, token.RBRACK.String()
 }
 
 // Next Open Brace. Parses a '{'.
-func (s *Scanner) nextOpenBrace() (token.Tokint, string) {
+func (s *Scanner) nextOpenBrace() (token.Type, string) {
 	s.next()
 	return token.LBRACE, token.LBRACE.String()
 }
 
 // Next Close Brace. Parses a '}'.
-func (s *Scanner) nextCloseBrace() (token.Tokint, string) {
+func (s *Scanner) nextCloseBrace() (token.Type, string) {
 	s.next()
 	return token.RBRACE, token.RBRACE.String()
 }
 
 // Next Plus. Parse a '+'.
-func (s *Scanner) nextPlus() (token.Tokint, string) {
+func (s *Scanner) nextPlus() (token.Type, string) {
 	s.next() // skip '+'
 	return s.switch3(token.ADD, token.AddAssign, '+', token.INC)
 }
 
 // Next Dash. Parses a '-'.
-func (s *Scanner) nextDash() (token.Tokint, string) {
+func (s *Scanner) nextDash() (token.Type, string) {
 	s.next() // skip '-'
 	return s.switch3(token.SUB, token.SubAssign, '-', token.DEC)
 }
 
 // Next Star. Parse a '*'.
-func (s *Scanner) nextStar() (token.Tokint, string) {
+func (s *Scanner) nextStar() (token.Type, string) {
 	s.next() // skip '*'
 	return s.switch2(token.MUL, token.MulAssign)
 }
 
 // Next Slash. Parse a '/'.
-func (s *Scanner) nextSlash() (token.Tokint, string) {
+func (s *Scanner) nextSlash() (token.Type, string) {
 	s.next() // skip '/'
 	if s.ch == '/' || s.ch == '*' {
 		return s.nextComment()
@@ -341,7 +340,7 @@ func (s *Scanner) nextSlash() (token.Tokint, string) {
 	return s.switch2(token.QUO, token.QuoAssign)
 }
 
-func (s *Scanner) nextComment() (token.Tokint, string) {
+func (s *Scanner) nextComment() (token.Type, string) {
 	// '/' already consumed
 	buffer := bytes.NewBufferString("")
 	if s.ch == '/' {
@@ -371,18 +370,18 @@ func (s *Scanner) nextComment() (token.Tokint, string) {
 	panic("not reached")
 }
 
-func (s *Scanner) nextPercent() (token.Tokint, string) {
+func (s *Scanner) nextPercent() (token.Type, string) {
 	s.next()
 	return s.switch2(token.REM, token.RemAssign)
 }
 
-func (s *Scanner) nextCaret() (token.Tokint, string) {
+func (s *Scanner) nextCaret() (token.Type, string) {
 	s.next()
 	return s.switch2(token.XOR, token.XORAssign)
 }
 
 // Next Less. Parse a '<'.
-func (s *Scanner) nextLess() (token.Tokint, string) {
+func (s *Scanner) nextLess() (token.Type, string) {
 	s.next()
 	if s.ch == '-' {
 		s.next()
@@ -392,25 +391,25 @@ func (s *Scanner) nextLess() (token.Tokint, string) {
 }
 
 // Next Greater. Parse a '>'.
-func (s *Scanner) nextGreater() (token.Tokint, string) {
+func (s *Scanner) nextGreater() (token.Type, string) {
 	s.next()
 	return s.switch4(token.GTR, token.GEQ, '>', token.SHR, token.ShrAssign)
 }
 
 // Next Equal. Parse a '='.
-func (s *Scanner) nextEqual() (token.Tokint, string) {
+func (s *Scanner) nextEqual() (token.Type, string) {
 	s.next()
 	return s.switch2(token.ASSIGN, token.EQL)
 }
 
 // Next Bang. Parse a '!'.
-func (s *Scanner) nextBang() (token.Tokint, string) {
+func (s *Scanner) nextBang() (token.Type, string) {
 	s.next()
 	return s.switch2(token.NOT, token.NEQ)
 }
 
 // Next Ampersand. Parse a '&'.
-func (s *Scanner) nextAmpersand() (token.Tokint, string) {
+func (s *Scanner) nextAmpersand() (token.Type, string) {
 	s.next()
 	if s.ch == '^' {
 		s.next()
@@ -420,7 +419,7 @@ func (s *Scanner) nextAmpersand() (token.Tokint, string) {
 }
 
 // Next Pipe. Parse a '|'.
-func (s *Scanner) nextPipe() (token.Tokint, string) {
+func (s *Scanner) nextPipe() (token.Type, string) {
 	s.next()
 	return s.switch3(token.OR, token.ORAssign, '|', token.LOR)
 }
