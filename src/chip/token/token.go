@@ -12,12 +12,12 @@ type Token struct {
 
 // New takes a token type, string literal, and position.  It returns a chip Token.
 func New(typ Type, lit string, pos Pos) *Token {
-	return &Tok{typ: typ, lit: lit, pos: pos}
+	return &Token{typ: typ, lit: lit, pos: pos}
 }
 
-// NewEndTok returns a chip "EOF" token.
-func NewEndTok() *Token {
-	return NewTok(EOF, "EOF", NewPos(0, 0))
+// NewEOF returns an EOF token.
+func NewEOF() *Token {
+	return New(EOF, "EOF", NewPos(0, 0))
 }
 
 // String turns token.Token into a fmt.Stringer.

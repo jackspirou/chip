@@ -214,10 +214,10 @@ var tokens = [...]string{
 	VAR:    "var",
 }
 
-var keywords map[string]Tokint
+var keywords map[string]Type
 
 func init() {
-	keywords = make(map[string]Tokint)
+	keywords = make(map[string]Type)
 	for i := keywordBegin + 1; i < keywordEnd; i++ {
 		keywords[tokens[i]] = i
 	}
