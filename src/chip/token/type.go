@@ -11,10 +11,10 @@ type Type int
 // "+"). For all other tokens the string corresponds to the token
 // constant name (e.g. for the token IDENT, the string is "IDENT").
 //
-func (tok Type) String() string {
+func (t Type) String() string {
 	s := ""
-	if 0 <= tok && tok < Type(len(tokens)) {
-		s = tokens[tok]
+	if 0 <= t && t < Type(len(tokens)) {
+		s = tokens[t]
 	}
 	if s == "" {
 		s = "token(" + strconv.Itoa(int(tok)) + ")"
@@ -38,8 +38,8 @@ const (
 // operator op. If op is not a binary operator, the result
 // is LowestPrecedence.
 //
-func (tok Type) Precedence() int {
-	switch tok {
+func (t Type) Precedence() int {
+	switch t {
 	case LOR:
 		return 1
 	case LAND:
@@ -59,19 +59,19 @@ func (tok Type) Precedence() int {
 // Literal returns true for token types corresponding to identifiers
 // and basic type literals; it returns false otherwise.
 //
-func (tok Type) Literal() bool { return literalBegin < tok && tok < literalEnd }
+func (t Type) Literal() bool { return literalBegin < t && t < literalEnd }
 
 // Operator returns true for token types corresponding to operators and
 // delimiters; it returns false otherwise.
 //
-func (tok Type) Operator() bool { return operatorBegin < tok && tok < operatorEnd }
+func (t Type) Operator() bool { return operatorBegin < t && t < operatorEnd }
 
 // Assignment returns true for token types corresponding to assignments.
-func (tok Type) Assignment() bool {
-	return (assignBegin < tok && tok < assignEnd) || tok == ASSIGN || tok == INC || tok == DEC
+func (t Type) Assignment() bool {
+	return (assignBegin < t && t < assignEnd) || t == ASSIGN || t == INC || t == DEC
 }
 
 // Keyword returns true for token types corresponding to keywords;
 // it returns false otherwise.
 //
-func (tok Type) Keyword() bool { return keywordBegin < tok && tok < keywordEnd }
+func (t Type) Keyword() bool { return keywordBegin < t && t < keywordEnd }
