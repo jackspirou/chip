@@ -1,9 +1,6 @@
 language: go
 
 go:
-  - 1.0
-  - 1.1
+  - 1.3
+  - 1.4
   - tip
-
-#before_script:
-#  - export GOPATH=$GOPATH:$HOME/gopath/src/github.com/jackspirou/chip
