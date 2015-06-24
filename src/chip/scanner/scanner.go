@@ -49,7 +49,7 @@ func New(src io.Reader) *Scanner {
 	return s
 }
 
-// Scan returns the next token and string literal.
+// Scan returns the next token.Type and string literal in the source.
 func (s *Scanner) Scan() (token.Type, string) {
 
 	// skip any blank spaces
