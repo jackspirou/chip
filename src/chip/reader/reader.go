@@ -1,4 +1,4 @@
-// Package reader provides a Reader to slurp UTF-8 runes from a source.
+// Package reader provides an implimention to slurp UTF-8 runes from a source.
 //
 package reader
 

@@ -1,4 +1,4 @@
-// Package scanner provides a Scanner to slurp chip tokens from UTF-8 source files.
+// Package scanner provides an implimention to scan chip tokens in a UTF-8 source.
 //
 package scanner
 
@@ -11,7 +11,7 @@ import (
 	"github.com/jackspirou/chip/src/chip/token"
 )
 
-// Scanner represents a scanner to slurp chip tokens from UTF-8 source files.
+// Scanner represents a scanner to scan chip tokens in a UTF-8 source.
 type Scanner struct {
 
 	// input source
