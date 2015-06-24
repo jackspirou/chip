@@ -1,5 +1,5 @@
 // Package token defines constants representing the lexical tokens of the chip
-// programming language and basic operations on tokens (printing, predicates).
+// programming language and basic operations on those tokens (printing, predicates).
 //
 package token
 
