@@ -11,22 +11,22 @@ type Token struct {
 }
 
 // New takes a token type, string literal, and position.  It returns a chip token.
-func New(typ Type, lit string, pos Pos) *Token {
-	return &Token{typ: typ, lit: lit, pos: pos}
+func New(typ Type, lit string, pos Pos) Token {
+	return Token{typ: typ, lit: lit, pos: pos}
 }
 
 // NewEOF returns an EOF token.
-func NewEOF() *Token {
+func NewEOF() Token {
 	return New(EOF, "EOF", NewPos(0, 0))
 }
 
 // String turns token.Token into fmt.Stringer.
-func (t *Token) String() string {
+func (t Token) String() string {
 	return t.lit
 }
 
 // Type returns a token type.
-func (t *Token) Type() Type {
+func (t Token) Type() Type {
 	return t.typ
 }
 
