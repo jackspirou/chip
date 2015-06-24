@@ -34,9 +34,9 @@ const (
 	HighestPrec = 7
 )
 
-// Precedence returns the operator precedence of the binary
-// operator op. If op is not a binary operator, the result
-// is LowestPrecedence.
+// Precedence returns the token type precedence of the binary
+// operator type. If the token type is not a binary operator, the result
+// is token.LowestPrec.
 //
 func (t Type) Precedence() int {
 	switch t {
