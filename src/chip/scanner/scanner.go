@@ -27,8 +27,8 @@ type Scanner struct {
 	pos token.Pos
 }
 
-// NewScanner takes an io.Reader and returns a new Scanner.
-func NewScanner(src io.Reader) *Scanner {
+// New takes an io.Reader and returns a new chip Scanner.
+func New(src io.Reader) *Scanner {
 
 	// create a new scanner
 	s := &Scanner{
