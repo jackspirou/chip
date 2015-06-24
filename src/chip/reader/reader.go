@@ -1,4 +1,4 @@
-// Package reader provides an implimention to slurp UTF-8 runes from a source.
+// Package reader provides an implimention to read UTF-8 characters from a source.
 //
 package reader
 
@@ -17,7 +17,7 @@ const (
 	bufLen = 1024
 )
 
-// Reader represents a reader to slup Unicode runes from a source.
+// Reader represents a reader to read Unicode characters from a source.
 type Reader struct {
 
 	// input source
