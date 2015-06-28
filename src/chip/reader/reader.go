@@ -13,6 +13,9 @@ const (
 	// EOF represents an end of file flag
 	EOF = -1
 
+	// BOM character that Reader ignores
+	BOM = '\uFEFF'
+
 	// buffer should be at least utf8.UTFMax (4) bytes
 	bufLen = 1024
 )
@@ -105,7 +108,7 @@ func (r *Reader) Peek() (rune, error) {
 		r.ch = char
 
 		// check for BOM
-		if r.ch == '\uFEFF' {
+		if r.ch == BOM {
 
 			// ignore BOM
 			char, err := r.next()
@@ -179,7 +182,7 @@ func (r *Reader) next() (rune, error) {
 
 				// advance for correct error position
 				r.srcPos += width
-				return EOF, errors.New("illegal UTF-8 encoding")
+				return EOF, errors.New("Reader Error: illegal UTF-8 encoding")
 			}
 		}
 	}
@@ -191,7 +194,7 @@ func (r *Reader) next() (rune, error) {
 	if ch == 0 {
 
 		// for compatibility with other tools
-		return EOF, errors.New("illegal character NUL")
+		return EOF, errors.New("Reader Error: illegal character NUL")
 	}
 
 	return ch, nil
