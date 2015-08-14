@@ -12,19 +12,24 @@ import (
 	"github.com/jackspirou/chip/src/chip/token"
 )
 
-// Scanner represents a scanner to scan chip tokens in a UTF-8 source.
+// Scanner describes a scanner to scan tokens from a UTF-8 io.Reader source.
 type Scanner struct {
-	src  io.Reader
-	rdr  *reader.Reader
-	char rune // current rune, useful for look-ahead
+	read *reader.Reader
+	char rune
 	pos  token.Pos
 }
 
 // New takes an io.Reader and returns a new chip Scanner.
-func New(src io.Reader) *Scanner {
-	s := &Scanner{src, reader.New(src), reader.EOF, token.NewPos(1, 0)}
-	s.next()
-	return s
+func New(src io.Reader) (*Scanner, error) {
+
+	s := &Scanner{read: reader.New(src), pos: token.NewPos(1, 0)}
+
+	// we must advance the scanner to first position
+	if err := s.next(); err != nil {
+		return nil, err
+	}
+
+	return s, nil
 }
 
 // Scan returns the next token.Type and string literal in the source.
@@ -99,7 +104,7 @@ func (s *Scanner) Scan() (token.Type, string) {
 // next advances the scanners position and reads the next char.
 func (s *Scanner) next() error {
 
-	char, err := s.rdr.Read()
+	char, err := s.read.Read()
 	if err != nil {
 		if char != reader.EOF {
 			return fmt.Errorf(

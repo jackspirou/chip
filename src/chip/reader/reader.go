@@ -1,5 +1,5 @@
-// Package reader provides an implimention to read UTF-8 characters from a source.
-//
+// Package reader provides an implimention to read UTF-8 characters from an
+// io.Reader source.
 package reader
 
 import (
@@ -20,28 +20,21 @@ const (
 	bufLen = 1024
 )
 
-// Reader describes a reader that reads Unicode characters from an io.Reader.
+// Reader describes a reader that reads Unicode characters from an io.Reader
+// source.
 type Reader struct {
-
-	// input source
-	src io.Reader
-
-	// source buffer
-	srcBuf [bufLen + 1]byte // +1 for sentinel for common case of s.next()
-	srcPos int              // reading position (srcBuf index)
-	srcEnd int              // source end (srcBuf index)
-
-	// source position byte offset of srcBuf[0]
-	srcBufOffset int
-
-	// one character look-ahead, char before current srcPos
-	char rune
+	src          io.Reader
+	srcBuf       [bufLen + 1]byte // +1 for sentinel for common case of s.next()
+	srcPos       int              // reading position (srcBuf index)
+	srcEnd       int              // source end (srcBuf index)
+	srcBufOffset int              // source position byte offset of srcBuf[0]
+	char         rune             // one char look-ahead, before current srcPos
 }
 
-// New takes an io.Reader and returns a new Reader.
+// New returns a new Reader object.
 func New(src io.Reader) *Reader {
 
-	r := &Reader{src: src, char: EOF} // no char read yet
+	r := &Reader{src: src, char: EOF}
 
 	// initialize source buffer
 	// (the first call to next() will fill it by calling src.Read)
