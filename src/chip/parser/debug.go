@@ -7,23 +7,25 @@ import (
 	"strings"
 )
 
-const Tracing = true //  Enable or disable ENTER/EXIT.
+// tracing defaults to true since we are currently in development.
+var tracing = true
 
-//  ENTER. If we're TRACING, then write a message saying METHOD has started.
+// enter writes a message to the terminal displaying the currently executing
+// parent function, if tracing is set to true.
 func (p *Parser) enter() {
-	if Tracing {
+	if tracing {
 		helper.WriteBlanks(p.level)
-		fmt.Println("Enter " + debug())
+		fmt.Println("enter " + debug())
 		p.level += 4
 	}
 }
 
-//  EXIT. Like EXIT, but here the message says METHOD has finished.
+// exit is like enter, but the message says the parent function is exiting.
 func (p *Parser) exit() {
-	if Tracing {
+	if tracing {
 		p.level -= 4
 		WriteBlanks(p.level)
-		fmt.Println("Exit  " + debug())
+		fmt.Println("exit  " + debug())
 	}
 }
 
@@ -35,6 +37,8 @@ func WriteBlanks(num int) {
 	}
 }
 
+// debug returns the name of the grandparent function by examining the stack at
+// runtime.
 func debug() string {
 	pc, _, _, ok := runtime.Caller(2)
 	if ok {

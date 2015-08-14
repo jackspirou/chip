@@ -22,7 +22,9 @@ type Scanner struct {
 
 // New takes an io.Reader and returns a new chip Scanner.
 func New(src io.Reader) *Scanner {
-	return &Scanner{src, reader.New(src), reader.EOF, token.NewPos(1, 0)}
+	s := &Scanner{src, reader.New(src), reader.EOF, token.NewPos(1, 0)}
+	s.next()
+	return s
 }
 
 // Scan returns the next token.Type and string literal in the source.

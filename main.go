@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jackspirou/chip/src/chip/parser"
+	"github.com/jackspirou/chip/src/chip/scanner"
+	"github.com/jackspirou/chip/src/chip/token"
 )
 
 func main() {
-	path := "tests/gcd.chp"
+	path := "test/gcd.chp"
 	fmt.Println(path)
 
 	file, err := os.Open(path)
@@ -19,7 +20,13 @@ func main() {
 
 	defer file.Close()
 
-	src := bufio.NewReader(file)
-	parser := parser.NewParser(src)
-	parser.GoParse()
+	scan := scanner.New(bufio.NewReader(file))
+
+	for {
+		tok, lit := scan.Scan()
+		fmt.Println(tok.String() + " " + lit)
+		if tok == token.ERROR || tok == token.EOF {
+			break
+		}
+	}
 }

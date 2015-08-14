@@ -2,7 +2,7 @@ package parser
 
 import "github.com/jackspirou/chip/src/chip/token"
 
-// Next Assignment. Parse an assignment.
+// nextAssignment parses the next assignment statement.
 func (p *Parser) nextAssignment() {
 	p.enter()
 	p.nextExpected(token.ASSIGN)
