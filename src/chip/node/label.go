@@ -5,13 +5,15 @@ import (
 	"github.com/jackspirou/chip/src/chip/types"
 )
 
-type LabelNode struct {
+// Label describes a node label for SSA intermediate representation.
+type Label struct {
 	typ   types.Typer
 	label *ssa.Label
 }
 
-func NewLabelNode(typ types.Typer, label *ssa.Label) *LabelNode {
-	return &LabelNode{
+// NewLabel creates a new label for a node.
+func NewLabel(typ types.Typer, label *ssa.Label) *Label {
+	return &Label{
 		typ:   typ,
 		label: label,
 	}

@@ -7,9 +7,7 @@ import (
 	"strings"
 )
 
-const (
-	Tracing = true //  Enable or disable ENTER/EXIT.
-)
+const Tracing = true //  Enable or disable ENTER/EXIT.
 
 //  ENTER. If we're TRACING, then write a message saying METHOD has started.
 func (p *Parser) enter() {

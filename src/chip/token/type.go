@@ -2,14 +2,15 @@ package token
 
 import "strconv"
 
-// Type is the set of lexical token types of the chip programming language.
+// Type is the set of lexical token types.
 type Type int
 
-// String returns the string corresponding to the token.
-// For operators, delimiters, and keywords the string is the actual
-// token character sequence (e.g., for the token ADD, the string is
-// "+"). For all other tokens the string corresponds to the token
-// constant name (e.g. for the token IDENT, the string is "IDENT").
+// String returns the string corresponding to the token type.
+//
+// For operators, delimiters, and keywords the string is the actual token
+// character sequence (e.g., for the token ADD, the string is "+"). For all
+// other tokens the string corresponds to the token constant name (e.g. for the
+// token IDENT, the string is "IDENT").
 //
 func (t Type) String() string {
 	s := ""
@@ -17,16 +18,17 @@ func (t Type) String() string {
 		s = tokens[t]
 	}
 	if s == "" {
-		s = "token(" + strconv.Itoa(int(tok)) + ")"
+		s = "token(" + strconv.Itoa(int(t)) + ")"
 	}
 	return s
 }
 
 // A set of constants for precedence-based expression parsing.
-// Non-operators have lowest precedence, followed by operators
-// starting with precedence 1 up to unary operators. The highest
-// precedence serves as "catch-all" precedence for selector,
-// indexing, and other operator and delimiter tokens.
+//
+// Non-operators have lowest precedence, followed by operators starting with
+// precedence 1 up to unary operators. The highest precedence serves as
+// "catch-all" precedence for selector, indexing, and other operator and
+// delimiter tokens.
 //
 const (
 	LowestPrec  = 0 // non-operators
@@ -34,10 +36,8 @@ const (
 	HighestPrec = 7
 )
 
-// Precedence returns the token type precedence of the binary
-// operator type. If the token type is not a binary operator, the result
-// is token.LowestPrec.
-//
+// Precedence returns the token type precedence of the binary operator type.
+// If the token type is not a binary operator, the result is token.LowestPrec.
 func (t Type) Precedence() int {
 	switch t {
 	case LOR:
@@ -56,8 +56,8 @@ func (t Type) Precedence() int {
 
 // Predicates
 
-// Literal returns true for token types corresponding to identifiers
-// and basic type literals; it returns false otherwise.
+// Literal returns true for token types corresponding to identifiers and basic
+// type literals; it returns false otherwise.
 //
 func (t Type) Literal() bool { return literalBegin < t && t < literalEnd }
 
@@ -71,7 +71,6 @@ func (t Type) Assignment() bool {
 	return (assignBegin < t && t < assignEnd) || t == ASSIGN || t == INC || t == DEC
 }
 
-// Keyword returns true for token types corresponding to keywords;
-// it returns false otherwise.
-//
+// Keyword returns true for token types corresponding to keywords; it returns
+// false otherwise.
 func (t Type) Keyword() bool { return keywordBegin < t && t < keywordEnd }

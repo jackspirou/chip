@@ -1,9 +1,6 @@
 package types
 
-import (
-	"github.com/jackspirou/chip/src/chip/token"
-	"github.com/jackspirou/chip/src/chip/types"
-)
+import "github.com/jackspirou/chip/src/chip/token"
 
 // Parameter
 type Parameter struct {
@@ -16,7 +13,7 @@ type Parameter struct {
 func newParameter(typ Typ) *Parameter {
 	return &Parameter{
 		typ:  typ,
-		name: types.String(),
+		name: String(),
 	}
 }
 

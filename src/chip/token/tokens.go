@@ -1,6 +1,6 @@
 package token
 
-// The list of chip token types.
+// The list of token types.
 const (
 	ILLEGAL Type = iota
 	ERROR        // error

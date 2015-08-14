@@ -14,25 +14,30 @@ import (
 	"fmt"
 
 	"github.com/jackspirou/chip/src/chip/node"
-	"github.com/jackspirou/chip/types"
+	"github.com/jackspirou/chip/src/chip/types"
 )
 
+// TBV stands for "Доверяй, но проверяй" or "Trust, but verify."
+//
+// TBV records a table of nodes and types so that parameters and return types
+// can be trusted/executed durring recursive decent parsing, but also verified.
 type TBV struct {
 	table       map[string]node.Node
-	impliedType types.Typ
+	impliedType types.Typer
 }
 
-func NewMassie() *TBV {
+// NewTBV returns a new TBV object.
+func NewTBV() *TBV {
 	t := new(TBV)
 	t.table = make(map[string]node.Node)
 	return t
 }
 
-func (t *TBV) ImplyType(imply types.Typ) {
+func (t *TBV) Imply(t types.Typer) {
 	t.impliedType = imply
 }
 
-func (t *TBV) GetImpliedType() types.Typ {
+func (t *TBV) Implied() types.Typer {
 	return t.impliedType
 }
 

@@ -10,17 +10,17 @@ import (
 
 const (
 
-	// EOF represents an end of file flag
+	// EOF represents the end of file rune.
 	EOF = -1
 
-	// BOM character that Reader ignores
+	// BOM runes are ignored.
 	BOM = '\uFEFF'
 
-	// buffer should be at least utf8.UTFMax (4) bytes
+	// buffer should be at least utf8.UTFMax (4) bytes.
 	bufLen = 1024
 )
 
-// Reader represents a reader to read Unicode characters from a source.
+// Reader describes a reader that reads Unicode characters from an io.Reader.
 type Reader struct {
 
 	// input source
@@ -35,13 +35,12 @@ type Reader struct {
 	srcBufOffset int
 
 	// one character look-ahead, char before current srcPos
-	ch rune
+	char rune
 }
 
 // New takes an io.Reader and returns a new Reader.
 func New(src io.Reader) *Reader {
 
-	// create a new reader
 	r := &Reader{
 
 		// set source
@@ -55,7 +54,7 @@ func New(src io.Reader) *Reader {
 		// srcBufOffset: 0,
 
 		// initialize one character look-ahead
-		ch: EOF, // no char read yet
+		char: EOF, // no char read yet
 	}
 
 	// initialize source buffer
@@ -70,22 +69,18 @@ func New(src io.Reader) *Reader {
 // character of the source.
 func (r *Reader) Read() (rune, error) {
 
-	// get the next char by peaking ahead
-	ch, err := r.Peek()
-
-	// error check
+	char, err := r.Peek()
 	if err != nil {
 		return EOF, err
 	}
 
-	// advance to the next char
-	char, err := r.next()
+	nextChar, err := r.next()
 
 	// set the current char equal to the next char
-	r.ch = char
+	r.char = nextChar
 
-	// return the peak ahead char
-	return ch, err
+	// return the char ahead char
+	return char, err
 }
 
 // Peek returns the next Unicode character in the source without advancing
@@ -93,50 +88,44 @@ func (r *Reader) Read() (rune, error) {
 // character of the source.
 func (r *Reader) Peek() (rune, error) {
 
-	// check if this is the first character
-	if r.ch < 0 {
+	// if first character
+	if r.char < 0 {
 
-		// call next only for the very first character
 		char, err := r.next()
-
-		// error check
 		if err != nil {
 			return EOF, err
 		}
 
 		// set reader char
-		r.ch = char
+		r.char = char
 
-		// check for BOM
-		if r.ch == BOM {
+		if r.char == BOM {
 
 			// ignore BOM
 			char, err := r.next()
-
-			// error check
 			if err != nil {
 				return EOF, err
 			}
 
 			// set reader char
-			r.ch = char
+			r.char = char
 		}
 	}
 
-	return r.ch, nil
+	return r.char, nil
 }
 
-// next reads and returns the next Unicode character. It is designed such
-// that only a minimal amount of work needs to be done in the common ASCII
-// case (one test to check for both ASCII and end-of-buffer, and one test
-// to check for newlines).
+// next reads and returns the next Unicode character. It is designed such that
+// only a minimal amount of work needs to be done in the common ASCII case
+// (one test to check for both ASCII and end-of-buffer, and one test to check
+// for newlines).
 func (r *Reader) next() (rune, error) {
 
-	// get the char from the buffer
-	ch, width := rune(r.srcBuf[r.srcPos]), 1
+	// char from buffer
+	char, width := rune(r.srcBuf[r.srcPos]), 1
 
-	// compare ch to utf8.RuneSelf
-	if ch >= utf8.RuneSelf {
+	// compare char to utf8.RuneSelf
+	if char >= utf8.RuneSelf {
 
 		// uncommon case: not ASCII or not enough bytes
 		for r.srcPos+utf8.UTFMax > r.srcEnd && !utf8.FullRune(r.srcBuf[r.srcPos:r.srcEnd]) {
@@ -173,16 +162,16 @@ func (r *Reader) next() (rune, error) {
 		}
 
 		// at least one byte
-		ch = rune(r.srcBuf[r.srcPos])
-		if ch >= utf8.RuneSelf {
+		char = rune(r.srcBuf[r.srcPos])
+		if char >= utf8.RuneSelf {
 
 			// uncommon case: not ASCII
-			ch, width = utf8.DecodeRune(r.srcBuf[r.srcPos:r.srcEnd])
-			if ch == utf8.RuneError && width == 1 {
+			char, width = utf8.DecodeRune(r.srcBuf[r.srcPos:r.srcEnd])
+			if char == utf8.RuneError && width == 1 {
 
 				// advance for correct error position
 				r.srcPos += width
-				return EOF, errors.New("Reader Error: illegal UTF-8 encoding")
+				return EOF, errors.New("found illegal UTF-8 encoding")
 			}
 		}
 	}
@@ -191,11 +180,11 @@ func (r *Reader) next() (rune, error) {
 	r.srcPos += width
 
 	// special situations
-	if ch == 0 {
+	if char == 0 {
 
 		// for compatibility with other tools
-		return EOF, errors.New("Reader Error: illegal character NUL")
+		return EOF, errors.New("found illegal character NUL")
 	}
 
-	return ch, nil
+	return char, nil
 }
