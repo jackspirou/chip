@@ -19,22 +19,22 @@ func NewLabel(typ types.Typer, label *ssa.Label) *Label {
 	}
 }
 
-func (l *LabelNode) Lvalue() string {
+func (l *Label) Lvalue() string {
 	return "Variable Node Lvalue()"
 }
 
-func (l *LabelNode) Rvalue() string {
+func (l *Label) Rvalue() string {
 	return "Variable Node Rvalue()"
 }
 
-func (l *LabelNode) Label() *ssa.Label {
+func (l *Label) Label() *ssa.Label {
 	return l.label
 }
 
-func (l *LabelNode) Type() types.Typer {
+func (l *Label) Type() types.Typer {
 	return l.typ
 }
 
-func (l *LabelNode) String() string {
-	return "[LabelNode " + l.types.String() + " " + l.label.String() + "]"
+func (l *Label) String() string {
+	return "[LabelNode " + l.typ.String() + " " + l.label.String() + "]"
 }

@@ -1,39 +1,42 @@
 package scope
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/jackspirou/chip/src/chip/node"
 )
 
-// SYMBOLTABLE. SymbolTable which stores descriptor nodes.
+// SymTab describes a symboltable that stores describtor nodes.
 type SymTab struct {
 	table map[string]node.Node
 }
 
-func NewSymTab() *SymTab {
-	return &SymTab{
+// newSymTab returns a new symTab object.
+func newSymTab() SymTab {
+	return SymTab{
 		table: make(map[string]node.Node),
 	}
 }
 
-func (s *SymTab) Contains(name string) bool {
+// contains checks if the symboltable contains a specific node name.
+func (s SymTab) contains(name string) bool {
 	_, ok := s.table[name]
 	return ok
 }
 
-func (s *SymTab) Set(name string, node node.Node) error {
-	if s.Contains(name) {
-		return errors.New("'" + name + "' cannot be declared twice.")
+// set sets a node and its name in the symboltable.
+func (s *SymTab) set(name string, node node.Node) error {
+	if s.contains(name) {
+		return fmt.Errorf("'%s' cannot be declared twice", name)
 	}
 	s.table[name] = node
 	return nil
 }
 
-func (s *SymTab) Get(name string) (node.Node, error) {
-	if s.Contains(name) {
-		node, _ := s.table[name]
+// get gets a node by its name.
+func (s SymTab) get(name string) (node.Node, error) {
+	if node, ok := s.table[name]; ok {
 		return node, nil
 	}
-	return nil, errors.New("'" + name + "' has not yet been declared twice.")
+	return nil, fmt.Errorf("'%s' has not yet been declared", name)
 }

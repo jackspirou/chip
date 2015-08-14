@@ -7,23 +7,23 @@ import (
 
 // A Node that describes a register
 type RegNode struct {
-	typ types.Typ
+	typ types.Typer
 	reg *ssa.Register
 }
 
-func NewRegNode(typ types.Typ, reg *ssa.Register) *RegNode {
+func NewRegNode(typ types.Typer, reg *ssa.Register) *RegNode {
 	return &RegNode{
 		typ: typ,
 		reg: reg,
 	}
 }
 
-func (r *RegNode) Type() types.Typ {
+func (r *RegNode) Type() types.Typer {
 	return r.typ
 }
 
 func (r *RegNode) String() string {
-	return "[RegNode " + r.types.String() + " " + r.reg.String() + "]"
+	return "[RegNode " + r.typ.String() + " " + r.reg.String() + "]"
 }
 
 func (r *RegNode) Reg() *ssa.Register {

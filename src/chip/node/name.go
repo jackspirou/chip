@@ -7,7 +7,7 @@ import (
 
 // A Node that describes a name
 type NameNode interface {
-	Type() types.Typ
+	Type() types.Typer
 	String() string
 	Label() *ssa.Label
 	Lvalue() string

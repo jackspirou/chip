@@ -2,8 +2,8 @@ package node
 
 import "github.com/jackspirou/chip/src/chip/types"
 
-// A General Node Descriptor
+// Node represents a general descriptor.
 type Node interface {
-	Type() types.Typ
+	Type() types.Typer
 	String() string
 }

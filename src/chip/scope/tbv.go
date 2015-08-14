@@ -22,8 +22,8 @@ import (
 // TBV records a table of nodes and types so that parameters and return types
 // can be trusted/executed durring recursive decent parsing, but also verified.
 type TBV struct {
-	table       map[string]node.Node
-	impliedType types.Typer
+	table map[string]node.Node
+	typ   types.Typer
 }
 
 // NewTBV returns a new TBV object.
@@ -33,12 +33,12 @@ func NewTBV() *TBV {
 	return t
 }
 
-func (t *TBV) Imply(t types.Typer) {
-	t.impliedType = imply
+func (t *TBV) Imply(typ types.Typer) {
+	t.typ = typ
 }
 
-func (t *TBV) Implied() types.Typer {
-	return t.impliedType
+func (t *TBV) Type() types.Typer {
+	return t.typ
 }
 
 func (t *TBV) Trust(name string, node node.Node) {
@@ -52,27 +52,25 @@ func (t *TBV) Trust(name string, node node.Node) {
 func (t *TBV) Check(name string, node node.Node) (bool, error) {
 	if trustedNode, ok := t.table[name]; ok {
 
-		trustedProcedureType := trustedNode.Type().(*types.ProcedureType)
-		procedureType := node.Type().(*types.ProcedureType)
+		trustedProc := trustedNode.Type().(*types.Proc)
+		proc := node.Type().(*types.Proc)
 
-		// fmt.Println(trustedProcedureType.GetValue().GetType())
-
-		if trustedProcedureType.Value() != nil {
-			if trustedProcedureType.Value().Type() != procedureType.Value().Type() {
-				return false, errors.New("The function '" + name + "' must return either a type " + trustedProcedureType.Value().String() + " or " + procedureType.Value().String() + ". Not both.")
+		if trustedProc.Value() != nil {
+			if trustedProc.Value().Type() != proc.Value().Type() {
+				return false, errors.New("The function '" + name + "' must return either a type " + trustedProc.Value().String() + " or " + proc.Value().String() + ". Not both.")
 			}
 		}
-		if trustedProcedureType.Arity() != procedureType.Arity() {
+		if trustedProc.Arity() != proc.Arity() {
 			return false, errors.New("Number of arguments do not match.")
 		}
-		trustedParameters := trustedProcedureType.ParameterList()
-		nodeParameters := procedureType.ParameterList()
-		for nodeParameters != nil {
-			if nodeParameters.Type() != trustedParameters.Type() {
+		trustedParam := trustedProc.Param()
+		param := proc.Param()
+		for param != nil {
+			if param.Type() != trustedParam.Type() {
 				return false, errors.New("Parameter types are off.")
 			}
-			nodeParameters = nodeParameters.Next()
-			trustedParameters = trustedParameters.Next()
+			param = param.Next()
+			trustedParam = trustedParam.Next()
 		}
 		return true, nil
 	}
