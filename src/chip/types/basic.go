@@ -2,22 +2,26 @@ package types
 
 import "github.com/jackspirou/chip/src/chip/token"
 
-type BasicType struct {
+// Basic describes a basic type.
+type Basic struct {
 	tok  token.Type
 	name string
 }
 
-func NewBasicType(tok token.Type) *BasicType {
-	return &BasicType{
+// NewBasic returns a Basic object.
+func NewBasic(tok token.Type) *Basic {
+	return &Basic{
 		tok:  tok,
 		name: tok.String(),
 	}
 }
 
-func (b *BasicType) Type() token.Type {
+// Type returns the token.Type.
+func (b *Basic) Type() token.Type {
 	return b.tok
 }
 
-func (b *BasicType) String() string {
+// String satisfies the fmt.Stringer interface.
+func (b *Basic) String() string {
 	return b.name
 }

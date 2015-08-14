@@ -18,13 +18,13 @@ func newParam(typ Typer) *Param {
 }
 
 // Type returns the parameter's type.
-func (p *Param) Type() token.Type {
+func (p Param) Type() token.Type {
 	return p.typ.Type()
 }
 
 // String impliments the fmt.Stringer interface and returns the name of the
 // parameter.
-func (p *Param) String() string {
+func (p Param) String() string {
 	return p.name
 }
 

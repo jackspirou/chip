@@ -2,22 +2,26 @@ package types
 
 import "github.com/jackspirou/chip/src/chip/token"
 
-type ArrayType struct {
-	basicType BasicType
-	name      string
+// Array describes an array type.
+type Array struct {
+	basic Basic
+	name  string
 }
 
-func NewArrayType(basicType BasicType) *ArrayType {
-	return &ArrayType{
-		basicType: basicType,
-		name:      basicType.String(),
+// NewArray returns an Array object.
+func NewArray(basic Basic) *Array {
+	return &Array{
+		basic: basic,
+		name:  basic.String(),
 	}
 }
 
-func (a *ArrayType) Type() token.Type {
-	return a.basicType.Type()
+// Type returns the token.Type.
+func (a *Array) Type() token.Type {
+	return a.basic.Type()
 }
 
-func (a *ArrayType) String() string {
+// String satisfies the fmt.Stringer interface.
+func (a *Array) String() string {
 	return a.name + " array"
 }
