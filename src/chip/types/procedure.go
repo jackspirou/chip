@@ -2,57 +2,57 @@ package types
 
 import "github.com/jackspirou/chip/src/chip/token"
 
-// Procedure Type
-type ProcedureType struct {
-	arity int        //  Number of parameters for this procedure.
-	first *Parameter //  Head node of the parameter list.
-	last  *Parameter //  Last node of the parameter list.
-	value Typ        //  The type this procedure returns.
+// Proc describes a procedure type.
+type Proc struct {
+	arity int    //  Number of parameters for this procedure.
+	first *Param //  Head node of the parameter list.
+	last  *Param //  Last node of the parameter list.
+	value Typer  //  The type this procedure returns.
 }
 
-//  Constructor. Make a new procedure type. Its parameter list is empty and its
-//  value type is missing. We'll fill them in later.
-func NewProcedureType() *ProcedureType {
-	p := new(Parameter)
-	return &ProcedureType{
+// NewProc returns a new Proc object.
+func NewProc() *Proc {
+	p := &Param{}
+	return &Proc{
 		arity: 0,
 		first: p,
 		last:  p,
 	}
 }
 
-//  ADD PARAMETER. Add a new parameter TYPE to the end of the parameter list.
-func (p *ProcedureType) InsertParam(typ Typ) {
+// AddParam adds a new parameter type to the end of the parameter list.
+func (p *Proc) AddParam(typ Typer) {
 	p.arity++
-	p.last.next = newParameter(typ)
+	p.last.next = newParam(typ)
 	p.last = p.last.next
 }
 
-//  ADD VALUE. Add the value type.
-func (p *ProcedureType) InsertValue(value Typ) {
+// AddValue adds the value type.
+func (p *Proc) AddValue(value Typer) {
 	p.value = value
 }
 
-func (p *ProcedureType) Value() Typ {
+// Value returns the procedures type.
+func (p *Proc) Value() Typer {
 	return p.value
 }
 
-//  GET ARITY. Return the number of parameters in this type.
-func (p *ProcedureType) Arity() int {
+// Arity returns the number of parameters in this procedure.
+func (p *Proc) Arity() int {
 	return p.arity
 }
 
-//  PARAMETER LIST. Return the parameter list of this type.
-func (p *ProcedureType) ParameterList() *Parameter {
+// Param returns the first parameter of this procedure.
+func (p *Proc) Param() *Param {
 	return p.first.next
 }
 
-//  GET TYPE. Return the value type of this type.
-func (p *ProcedureType) Type() token.Tokint {
+// Type returns the token type of this procedure.
+func (p *Proc) Type() token.Type {
 	return p.value.Type()
 }
 
-//  TO STRING. Return a string that notates this type.
-func (p *ProcedureType) String() string {
+// String satisfies the fmt.Stringer interface.
+func (p *Proc) String() string {
 	return "PROC TYPE"
 }

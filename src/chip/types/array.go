@@ -14,7 +14,7 @@ func NewArrayType(basicType BasicType) *ArrayType {
 	}
 }
 
-func (a *ArrayType) Type() token.Tokint {
+func (a *ArrayType) Type() token.Type {
 	return a.basicType.Type()
 }
 
