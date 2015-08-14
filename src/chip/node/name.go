@@ -5,8 +5,8 @@ import (
 	"github.com/jackspirou/chip/src/chip/types"
 )
 
-// A Node that describes a name
-type NameNode interface {
+// Name describes a name node.
+type Name interface {
 	Type() types.Typer
 	String() string
 	Label() *ssa.Label

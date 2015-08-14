@@ -5,27 +5,27 @@ import (
 	"github.com/jackspirou/chip/src/chip/types"
 )
 
-// A Node that describes a register
-type RegNode struct {
+// Reg describes a register node.
+type Reg struct {
 	typ types.Typer
 	reg *ssa.Register
 }
 
-func NewRegNode(typ types.Typer, reg *ssa.Register) *RegNode {
-	return &RegNode{
+func NewReg(typ types.Typer, reg *ssa.Register) *Reg {
+	return &Reg{
 		typ: typ,
 		reg: reg,
 	}
 }
 
-func (r *RegNode) Type() types.Typer {
+func (r *Reg) Type() types.Typer {
 	return r.typ
 }
 
-func (r *RegNode) String() string {
+func (r *Reg) String() string {
 	return "[RegNode " + r.typ.String() + " " + r.reg.String() + "]"
 }
 
-func (r *RegNode) Reg() *ssa.Register {
+func (r *Reg) Reg() *ssa.Register {
 	return r.reg
 }
