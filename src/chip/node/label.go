@@ -26,10 +26,12 @@ func (l *Label) Rvalue() string {
 	return "Variable Node Rvalue()"
 }
 
+// Label returns the ssa.Label.
 func (l *Label) Label() *ssa.Label {
 	return l.label
 }
 
+// Type returns the label type.
 func (l *Label) Type() types.Typer {
 	return l.typ
 }

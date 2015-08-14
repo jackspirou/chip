@@ -20,9 +20,7 @@ type Parser struct {
 	// file scanner
 	scanr *scanner.Scanner
 
-	//
-	tokn  *token.Tok
-	tok   token.Tokint
+	tok   token.Type
 	lit   string
 	alloc *ssa.Allocator
 	// tacs  chan *tacs.Tac
