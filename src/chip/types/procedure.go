@@ -13,11 +13,7 @@ type Proc struct {
 // NewProc returns a new Proc object.
 func NewProc() *Proc {
 	p := &Param{}
-	return &Proc{
-		arity: 0,
-		first: p,
-		last:  p,
-	}
+	return &Proc{arity: 0, first: p, last: p}
 }
 
 // AddParam adds a new parameter type to the end of the parameter list.

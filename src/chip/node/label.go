@@ -13,10 +13,7 @@ type Label struct {
 
 // NewLabel creates a new label for a node.
 func NewLabel(typ types.Typer, label *ssa.Label) *Label {
-	return &Label{
-		typ:   typ,
-		label: label,
-	}
+	return &Label{typ, label}
 }
 
 // Lvalue returns a string representing the left value of the label.

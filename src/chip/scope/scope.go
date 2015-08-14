@@ -14,9 +14,7 @@ type Scope struct {
 
 // NewScope creates a new Scope object.
 func NewScope() *Scope {
-	return &Scope{
-		stack: newStack(),
-	}
+	return &Scope{newStack()}
 }
 
 // Empty returns false if no elements are in any scope.

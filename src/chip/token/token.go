@@ -11,7 +11,7 @@ type Token struct {
 
 // New creates a new Token.
 func New(typ Type, lit string, pos Pos) Token {
-	return Token{typ: typ, lit: lit, pos: pos}
+	return Token{typ, lit, pos}
 }
 
 // NewEOF returns an EOF Token.
@@ -39,7 +39,7 @@ type Pos struct {
 
 // NewPos returns a new Pos object.
 func NewPos(line int, column int) Pos {
-	return Pos{Line: line, Column: column}
+	return Pos{line, column}
 }
 
 // Valid validates a Pos object.

@@ -13,9 +13,7 @@ type SymTab struct {
 
 // newSymTab returns a new symTab object.
 func newSymTab() SymTab {
-	return SymTab{
-		table: make(map[string]node.Node),
-	}
+	return SymTab{make(map[string]node.Node)}
 }
 
 // contains checks if the symboltable contains a specific node name.

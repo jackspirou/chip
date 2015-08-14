@@ -11,10 +11,7 @@ type Param struct {
 
 // newParam returns a new parameter of the provided type.
 func newParam(typ Typer) *Param {
-	return &Param{
-		typ:  typ,
-		name: typ.String(),
-	}
+	return &Param{typ: typ, name: typ.String()}
 }
 
 // Type returns the parameter's type.

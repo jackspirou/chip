@@ -12,10 +12,7 @@ type Reg struct {
 }
 
 func NewReg(typ types.Typer, reg *ssa.Register) *Reg {
-	return &Reg{
-		typ: typ,
-		reg: reg,
-	}
+	return &Reg{typ, reg}
 }
 
 func (r *Reg) Type() types.Typer {

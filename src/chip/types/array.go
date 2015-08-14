@@ -10,10 +10,7 @@ type Array struct {
 
 // NewArray returns an Array object.
 func NewArray(basic Basic) *Array {
-	return &Array{
-		basic: basic,
-		name:  basic.String(),
-	}
+	return &Array{basic, basic.String()}
 }
 
 // Type returns the token.Type.

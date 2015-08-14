@@ -28,9 +28,7 @@ type TBV struct {
 
 // NewTBV returns a new TBV object.
 func NewTBV() *TBV {
-	t := new(TBV)
-	t.table = make(map[string]node.Node)
-	return t
+	return &TBV{table: make(map[string]node.Node)}
 }
 
 func (t *TBV) Imply(typ types.Typer) {

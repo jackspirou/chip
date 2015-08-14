@@ -41,21 +41,7 @@ type Reader struct {
 // New takes an io.Reader and returns a new Reader.
 func New(src io.Reader) *Reader {
 
-	r := &Reader{
-
-		// set source
-		src: src,
-
-		// default positions to 0
-		// srcPos: 0,
-		// srcEnd: 0,
-
-		// initialize source position to 0
-		// srcBufOffset: 0,
-
-		// initialize one character look-ahead
-		char: EOF, // no char read yet
-	}
+	r := &Reader{src: src, char: EOF} // no char read yet
 
 	// initialize source buffer
 	// (the first call to next() will fill it by calling src.Read)

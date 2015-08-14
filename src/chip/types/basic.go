@@ -10,10 +10,7 @@ type Basic struct {
 
 // NewBasic returns a Basic object.
 func NewBasic(tok token.Type) *Basic {
-	return &Basic{
-		tok:  tok,
-		name: tok.String(),
-	}
+	return &Basic{tok, tok.String()}
 }
 
 // Type returns the token.Type.
