@@ -20,7 +20,10 @@ func main() {
 
 	defer file.Close()
 
-	scan := scanner.New(bufio.NewReader(file))
+	scan, err := scanner.New(bufio.NewReader(file))
+	if err != nil {
+		panic(err)
+	}
 
 	for {
 		tok, lit := scan.Scan()
