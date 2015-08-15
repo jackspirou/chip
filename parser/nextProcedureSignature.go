@@ -54,6 +54,7 @@ func (p *Parser) nextProcedureSignature() {
 
 	label := ssa.NewLabel(name)
 	des := node.NewLabel(proc, label)
+
 	_, err := p.scope.Global(name, des)
 	if err != nil {
 		log.Fatal(err)
