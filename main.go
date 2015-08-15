@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jackspirou/chip/src/chip/parser"
+	"github.com/jackspirou/chip/parser"
 )
 
 func main() {
@@ -24,6 +24,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	p.Tracing = true
 
 	p.Parse()
 
