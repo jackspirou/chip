@@ -6,7 +6,7 @@ import "github.com/jackspirou/chip/src/chip/token"
 func (p *Parser) nextProduct() {
 	p.enter()
 	p.nextTerm()
-	for p.tok == token.MUL || p.tok == token.QUO || p.tok == token.REM {
+	for p.tok.Type == token.MUL || p.tok.Type == token.QUO || p.tok.Type == token.REM {
 		p.next() // skip '*' or '/'
 		p.nextTerm()
 	}

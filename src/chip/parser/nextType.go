@@ -8,16 +8,16 @@ import (
 )
 
 // Next Type.  Parse the next type token.
-func (p *Parser) nextType() types.Typ {
+func (p *Parser) nextType() types.Typer {
 	p.enter()
-	var t types.Typ
-	switch strings.ToUpper(p.lit) {
+	var t types.Typer
+	switch strings.ToUpper(p.tok.String()) {
 	case token.INT.String():
-		t = types.NewBasicType(token.INT)
+		t = types.NewBasic(token.INT)
 	case token.STRING.String():
-		t = types.NewBasicType(token.STRING)
+		t = types.NewBasic(token.STRING)
 	default:
-		panic(token.INT.String() + " vs " + strings.ToLower(p.lit) + " | unsupported type: " + p.lit)
+		panic(token.INT.String() + " vs " + strings.ToLower(p.tok.String()) + " | unsupported type: " + p.tok.String())
 	}
 	p.next()
 	p.exit()

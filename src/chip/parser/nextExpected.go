@@ -5,11 +5,11 @@ import (
 )
 
 // Next Expected. Expects argument as the next token.
-func (p *Parser) nextExpected(expected token.Tokint) {
-	if p.tok == expected {
+func (p *Parser) nextExpected(expected token.Type) {
+	if p.tok.Type == expected {
 		p.next()
 	} else {
-		msg := "\"" + expected.String() + "\" expected instead of \"" + p.tokn.String() + "\"."
+		msg := "\"" + expected.String() + "\" expected instead of \"" + p.tok.String() + "\"."
 		panic(msg)
 	}
 }

@@ -6,7 +6,7 @@ import "github.com/jackspirou/chip/src/chip/token"
 func (p *Parser) nextTerm() {
 	p.enter()
 	p.nextUnit()
-	for p.tok == token.SUB || p.tok == token.NOT {
+	for p.tok.Type == token.SUB || p.tok.Type == token.NOT {
 		p.next() // skip '-' or '!'
 		p.nextUnit()
 	}

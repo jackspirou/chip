@@ -8,7 +8,7 @@ import (
 func (p *Parser) nextComparison() {
 	p.enter()
 	p.nextSum()
-	switch p.tok {
+	switch p.tok.Type {
 	case token.EQL:
 		p.next() // skip '=='
 		p.nextSum()

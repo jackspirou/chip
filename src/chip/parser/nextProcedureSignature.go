@@ -13,44 +13,44 @@ import (
 func (p *Parser) nextProcedureSignature() {
 	p.enter()
 	p.nextExpected(token.FUNC)
-	procName := p.lit
+	procName := p.tok.String()
 	p.nextExpected(token.IDENT) // skip proc name
 	p.nextExpected(token.LPAREN)
-	proc := types.NewProcedureType()
-	if p.tok != token.RPAREN {
-		paramName := p.lit
+	proc := types.NewProc()
+	if p.tok.Type != token.RPAREN {
+		paramName := p.tok.String()
 		p.nextExpected(token.IDENT) // skip param name
 		paramType := p.nextType()
 
-		proc.InsertParam(paramType)
+		proc.AddParam(paramType)
 		reg := p.alloc.Request()
-		paramDes := node.NewRegNode(paramType, reg)
-		p.scope.Insert(paramName, paramDes)
+		paramDes := node.NewReg(paramType, reg)
+		p.scope.Add(paramName, paramDes)
 
-		for p.tok == token.COMMA {
+		for p.tok.Type == token.COMMA {
 			p.next() // skip ','
-			paramName = p.lit
+			paramName = p.tok.String()
 			p.nextExpected(token.IDENT) // skip proc name
 			paramType = p.nextType()
 
-			proc.InsertParam(paramType)
+			proc.AddParam(paramType)
 			reg = p.alloc.Request()
-			paramDes = node.NewRegNode(paramType, reg)
-			p.scope.Insert(paramName, paramDes)
+			paramDes = node.NewReg(paramType, reg)
+			p.scope.Add(paramName, paramDes)
 		}
 	}
 	p.nextExpected(token.RPAREN)
-	if p.tok != token.LBRACE {
+	if p.tok.Type != token.LBRACE {
 		valueType := p.nextType()
-		proc.InsertValue(valueType)
-		for p.tok == token.COMMA {
+		proc.AddValue(valueType)
+		for p.tok.Type == token.COMMA {
 			p.next() // skip ','
 			valueType = p.nextType()
-			proc.InsertValue(valueType)
+			proc.AddValue(valueType)
 		}
 	}
 	label := ssa.NewLabel(procName)
-	des := node.NewLabelNode(proc, label)
+	des := node.NewLabel(proc, label)
 	_, err := p.scope.Global(procName, des)
 	if err != nil {
 		panic(err)

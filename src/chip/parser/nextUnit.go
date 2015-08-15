@@ -5,36 +5,36 @@ import "github.com/jackspirou/chip/src/chip/token"
 // Next Unit. Parse a unit.
 func (p *Parser) nextUnit() {
 	p.enter()
-	switch p.tok {
+	switch p.tok.Type {
 	case token.IDENT:
-		//p.lit // var or proc name
+		//p.tok.Type == // var or proc name
 		p.next()
-		if p.tok == token.LPAREN {
+		if p.tok.Type == token.LPAREN {
 			p.next() // skip '('
-			if p.tok != token.RPAREN {
+			if p.tok.Type != token.RPAREN {
 				p.nextExpression()
-				for p.tok == token.COMMA {
+				for p.tok.Type == token.COMMA {
 					p.next() // skip ','
 					p.nextExpression()
 				}
 			}
 			p.nextExpected(token.RPAREN)
-		} else if p.tok == token.LBRACK {
+		} else if p.tok.Type == token.LBRACK {
 			p.next()
 			p.nextExpression()
 			p.nextExpected(token.RBRACK)
 		}
 	case token.INT:
-		//p.lit
+		//p.tok.Type ==
 		p.next()
 	case token.FLOAT:
-		//p.lit
+		//p.tok.Type ==
 		p.next()
 	case token.CHAR:
-		//p.lit
+		//p.tok.Type ==
 		p.next()
 	case token.STRING:
-		//p.lit
+		//p.tok.Type ==
 		p.next()
 	default:
 		panic("Term expected.")

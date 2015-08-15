@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -15,47 +16,54 @@ import (
 type Parser struct {
 	scan  *scanner.Scanner
 	tok   token.Token
-	lit   string // literal value of a token
 	alloc *ssa.Allocator
 	level int // recursion level
 	scope *scope.Scope
 }
 
-func NewParser(src io.Reader) *Parser {
+// New returns a new Parser object.
+func New(src io.Reader) (*Parser, error) {
+	scan, err := scanner.New(src)
+	if err != nil {
+		return nil, err
+	}
+
 	p := &Parser{
-		scan:  scanner.NewScanner(src),
+		scan:  scan,
 		tok:   token.NewEOF(),
 		alloc: ssa.NewAllocator(),
 		scope: scope.NewScope(),
 	}
+
+	p.next()
 	p.scope.Open()
-	return p
+
+	return p, nil
 }
 
 // Parse starts Parser parsing.
-func (p *Parser) Parse() {
-	p.run()
-	fmt.Println(p.scope.String())
-}
-
-// run is does all the real work for the Parse method.
-func (p *Parser) run() {
+func (p *Parser) Parse() error {
 	start := time.Now()
-	p.next()
-	p.parse()
+	if err := p.parse(); err != nil {
+		return err
+	}
 	end := time.Now()
 	duration := end.Sub(start)
 	fmt.Println(duration)
+	fmt.Println(p.scope.String())
+	return nil
 }
 
-func (p *Parser) parse() { p.nextFile() }
+func (p *Parser) parse() error { return p.nextFile() }
 
-func (p *Parser) next() token.Token {
-	for tok.Type() == token.COMMENT {
-		//
+func (p *Parser) next() error {
+	tok := p.scan.Scan()
+	for tok.Type == token.COMMENT {
+		tok = p.scan.Scan()
 	}
-	p.tokn = tokn
-	p.tok = tokn.Typ()
-	p.lit = tokn.String()
-	return p.tok
+	if tok.Type == token.ERROR {
+		return errors.New(tok.String())
+	}
+	p.tok = tok
+	return nil
 }

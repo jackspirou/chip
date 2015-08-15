@@ -14,7 +14,7 @@ var tracing = true
 // parent function, if tracing is set to true.
 func (p *Parser) enter() {
 	if tracing {
-		helper.WriteBlanks(p.level)
+		WriteBlanks(p.level)
 		fmt.Println("enter " + debug())
 		p.level += 4
 	}

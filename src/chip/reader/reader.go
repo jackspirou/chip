@@ -1,5 +1,4 @@
-// Package reader provides an implimention to read UTF-8 characters from an
-// io.Reader source.
+// Package reader reads UTF-8 characters from an io.Reader source.
 package reader
 
 import (
@@ -67,7 +66,7 @@ func (r *Reader) Read() (rune, error) {
 // character of the source.
 func (r *Reader) Peek() (rune, error) {
 
-	// if first character
+	// if first char
 	if r.char < 0 {
 
 		char, err := r.next()

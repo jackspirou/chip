@@ -6,7 +6,7 @@ import "github.com/jackspirou/chip/src/chip/token"
 func (p *Parser) nextSum() {
 	p.enter()
 	p.nextProduct()
-	for p.tok == token.ADD || p.tok == token.SUB {
+	for p.tok.Type == token.ADD || p.tok.Type == token.SUB {
 		p.next() // skip '+' or '-'
 		p.nextProduct()
 	}

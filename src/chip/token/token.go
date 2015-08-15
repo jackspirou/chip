@@ -4,9 +4,9 @@ package token
 
 // Token describes a lexical token.
 type Token struct {
-	typ Type   // token type
-	lit string // string value, e.g. "23.2"
-	pos Pos    // postion in the source file
+	Type Type   // token type
+	lit  string // string value, e.g. "23.2"
+	Pos  Pos    // postion in the source file
 }
 
 // New creates a new Token.
@@ -24,9 +24,9 @@ func (t Token) String() string {
 	return t.lit
 }
 
-// Type returns a tokens type.
-func (t Token) Type() Type {
-	return t.typ
+// Error makes Token impliment the errors interface.
+func (t Token) Error() string {
+	return t.String()
 }
 
 // Pos describes a tokens position in a source file.

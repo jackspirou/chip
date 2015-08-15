@@ -6,7 +6,7 @@ import "github.com/jackspirou/chip/src/chip/token"
 func (p *Parser) nextConjunction() {
 	p.enter()
 	p.nextComparison()
-	for p.tok == token.LAND {
+	for p.tok.Type == token.LAND {
 		p.next() // skip '&&'
 		p.nextComparison()
 	}
