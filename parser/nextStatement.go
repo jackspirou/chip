@@ -11,11 +11,11 @@ func (p *Parser) nextStatement() {
 	p.enter()
 	switch p.tok.Type {
 	case token.IDENT:
-		//p.tok.Type == // var or proc name
+		// p.tok.String() // var or proc name
 		p.next()
 		for p.tok.Type == token.PERIOD {
 			p.next() // skip '.'
-			//p.tok.Type == // var or proc name
+			// p.tok.String() // var or proc name
 			p.nextExpected(token.IDENT)
 		}
 		if p.tok.Type.Assignment() {

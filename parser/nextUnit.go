@@ -11,7 +11,7 @@ func (p *Parser) nextUnit() {
 	p.enter()
 	switch p.tok.Type {
 	case token.IDENT:
-		//p.tok.Type == // var or proc name
+		// p.tok.String() // var or proc name
 		p.next()
 		if p.tok.Type == token.LPAREN {
 			p.next() // skip '('
@@ -29,16 +29,16 @@ func (p *Parser) nextUnit() {
 			p.nextExpected(token.RBRACK)
 		}
 	case token.INT:
-		//p.tok.Type ==
+		// p.tok.String()
 		p.next()
 	case token.FLOAT:
-		//p.tok.Type ==
+		// p.tok.String()
 		p.next()
 	case token.CHAR:
-		//p.tok.Type ==
+		// p.tok.String()
 		p.next()
 	case token.STRING:
-		//p.tok.Type ==
+		// p.tok.String()
 		p.next()
 	default:
 		log.Fatalf("term expected, got '%s'", p.tok.String())

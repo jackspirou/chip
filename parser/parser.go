@@ -51,8 +51,10 @@ func (p *Parser) Parse() {
 	fmt.Println(duration)
 }
 
+// parse start parsing the next source file.
 func (p *Parser) parse() { p.nextFile() }
 
+// next advances the parser to the next token, skipping comment tokens.
 func (p *Parser) next() {
 	tok := p.scan.Scan()
 	for tok.Type == token.COMMENT {
