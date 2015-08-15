@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 func gcd(a int, b int) int {
   if b == 0 {
     return a
@@ -10,6 +8,5 @@ func gcd(a int, b int) int {
 }
 
 func main() {
-  // fmt.Println(gcd(252, 105))
-  fmt.Println(gcd(252, 105))
+  print(gcd(252, 105))
 }
