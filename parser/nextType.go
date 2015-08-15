@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"log"
 	"strings"
 
 	"github.com/jackspirou/chip/token"
@@ -17,7 +18,7 @@ func (p *Parser) nextType() types.Typer {
 	case token.STRING.String():
 		t = types.NewBasic(token.STRING)
 	default:
-		panic(token.INT.String() + " vs " + strings.ToLower(p.tok.String()) + " | unsupported type: " + p.tok.String())
+		log.Fatalf("unsupported type '%s'", p.tok.String())
 	}
 	p.next()
 	p.exit()

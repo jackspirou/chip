@@ -1,6 +1,10 @@
 package parser
 
-import "github.com/jackspirou/chip/token"
+import (
+	"log"
+
+	"github.com/jackspirou/chip/token"
+)
 
 // nextStatement parse a statement.
 func (p *Parser) nextStatement() {
@@ -36,7 +40,7 @@ func (p *Parser) nextStatement() {
 				}
 				p.nextExpected(token.RPAREN)
 			default:
-				panic("Expected an assignment or declaration, not a '" + p.tok.String() + "'")
+				log.Fatalf("assignment or declaration statement expected, got '%s'", p.tok.String())
 			}
 		}
 	case token.IF:
@@ -54,7 +58,7 @@ func (p *Parser) nextStatement() {
 	case token.CONST:
 		p.nextConstant()
 	default:
-		panic("Statement Expected, not a '" + p.tok.String() + "'")
+		log.Fatalf("statement expected, got '%s'", p.tok.String())
 	}
 	p.exit()
 }

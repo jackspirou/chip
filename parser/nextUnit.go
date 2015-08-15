@@ -1,6 +1,10 @@
 package parser
 
-import "github.com/jackspirou/chip/token"
+import (
+	"log"
+
+	"github.com/jackspirou/chip/token"
+)
 
 // nextUnit parses a unit.
 func (p *Parser) nextUnit() {
@@ -37,7 +41,7 @@ func (p *Parser) nextUnit() {
 		//p.tok.Type ==
 		p.next()
 	default:
-		panic("Term expected.")
+		log.Fatalf("term expected, got '%s'", p.tok.String())
 	}
 	p.exit()
 }
