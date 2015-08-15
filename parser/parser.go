@@ -61,7 +61,7 @@ func (p *Parser) next() {
 		tok = p.scan.Scan()
 	}
 	if tok.Type == token.ERROR {
-		log.Fatal(tok.String())
+		log.Fatal(tok)
 	}
 	p.tok = tok
 }

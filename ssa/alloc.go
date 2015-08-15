@@ -1,70 +1,74 @@
 package ssa
 
-import "strconv"
+import (
+	"log"
+	"strconv"
+)
 
+// Allocator describes an allocator for registers.
 type Allocator struct {
 	registers *Register // Linked stack of Register's to be allocated.
 	Zero      *Register
 	counter   int
 }
 
+// NewAllocator returns a new Allocator object.
 func NewAllocator() *Allocator {
-	a := new(Allocator)
-	a.Zero = NewRegister("$zero", nil, true)
-	a.counter = 1
-	a.registers = NewRegister("$r0", NewRegister("$r1", nil, false), false)
-
-	return a
+	return &Allocator{
+		registers: NewRegister("$r0", NewRegister("$r1", nil, false), false),
+		Zero:      NewRegister("$zero", nil, true),
+		counter:   1,
+	}
 }
 
-// Request.  Request a Mips register.
-func (this *Allocator) Request() *Register {
+// Request requests a register.
+func (a *Allocator) Request() *Register {
 
-	if this.registers.next == nil {
-		this.counter++
-		this.registers.next = NewRegister("$r"+strconv.Itoa(this.counter), nil, false)
+	if a.registers.next == nil {
+		a.counter++
+		a.registers.next = NewRegister("$r"+strconv.Itoa(a.counter), nil, false)
 	}
 
-	temp := this.registers
+	temp := a.registers
 	temp.used = true
-	this.registers = this.registers.next
+	a.registers = a.registers.next
 
-	// // p.enter()("Requested " + temp.String() + " : counter at " + strconv.Itoa(this.counter))
+	// // p.enter()("Requested " + temp.String() + " : counter at " + strconv.Itoa(a.counter))
 
 	return temp
 }
 
-// Release.  Release a Mips register.
-func (this *Allocator) Release(reg *Register) {
-	if !reg.IsUsed() {
-		panic("Empty Stack Exception")
+// Release releaes a register.
+func (a *Allocator) Release(reg *Register) {
+	if !reg.Used() {
+		log.Fatal("empty stack exception")
 	}
 	reg.used = false
-	temp := this.registers
-	this.registers = reg
-	this.registers.next = temp
+	temp := a.registers
+	a.registers = reg
+	a.registers.next = temp
 
-	// // p.enter()("Released " + temp.String())
+	// fmt.Println("Released " + temp.String())
 }
 
-// Register.  Mips registers.
+// Register describes a register. Register is modeled off MIPS registers.
 type Register struct {
 	name string    // Printable name of this Register.
 	used bool      // Next Register.
 	next *Register // Register use state.
 }
 
-// Constructor.
+// NewRegister returns a new Register object.
 func NewRegister(name string, next *Register, used bool) *Register {
 	return &Register{name: name, next: next, used: used}
 }
 
-// Is Used. Checks if the register is in use
-func (this *Register) IsUsed() bool {
-	return this.used
+// Used returns true of the register is currently in use.
+func (r *Register) Used() bool {
+	return r.used
 }
 
-// To String.  Returns the name of the register.
-func (this *Register) String() string {
-	return this.name
+// String satisfies the fmt.Stringer interface.
+func (r *Register) String() string {
+	return r.name
 }

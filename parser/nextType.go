@@ -18,7 +18,7 @@ func (p *Parser) nextType() types.Typer {
 	case token.STRING.String():
 		t = types.NewBasic(token.STRING)
 	default:
-		log.Fatalf("unsupported type '%s'", p.tok.String())
+		log.Fatalf("unsupported type '%s'", p.tok)
 	}
 	p.next()
 	p.exit()

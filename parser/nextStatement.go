@@ -40,7 +40,7 @@ func (p *Parser) nextStatement() {
 				}
 				p.nextExpected(token.RPAREN)
 			default:
-				log.Fatalf("assignment or declaration statement expected, got '%s'", p.tok.String())
+				log.Fatalf("assignment or declaration statement expected, got '%s'", p.tok)
 			}
 		}
 	case token.IF:
@@ -58,7 +58,7 @@ func (p *Parser) nextStatement() {
 	case token.CONST:
 		p.nextConstant()
 	default:
-		log.Fatalf("statement expected, got '%s'", p.tok.String())
+		log.Fatalf("statement expected, got '%s'", p.tok)
 	}
 	p.exit()
 }

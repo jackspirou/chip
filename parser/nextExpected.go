@@ -12,5 +12,5 @@ func (p *Parser) nextExpected(expected token.Type) {
 		p.next()
 		return
 	}
-	log.Fatalf("expected '%s', got '%s'", expected.String(), p.tok.String())
+	log.Fatalf("expected '%s', got '%s'", expected, p.tok)
 }

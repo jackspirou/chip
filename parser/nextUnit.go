@@ -41,7 +41,7 @@ func (p *Parser) nextUnit() {
 		// p.tok.String()
 		p.next()
 	default:
-		log.Fatalf("term expected, got '%s'", p.tok.String())
+		log.Fatalf("term expected, got '%s'", p.tok)
 	}
 	p.exit()
 }
