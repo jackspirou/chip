@@ -2,7 +2,7 @@ package parser
 
 import "github.com/jackspirou/chip/token"
 
-// nextDeclaration parse a declaration.
+// nextDeclaration parses a declaration.
 func (p *Parser) nextDeclaration() {
 	p.enter()
 	p.nextExpected(token.DEFINE)
