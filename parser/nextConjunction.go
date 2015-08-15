@@ -2,7 +2,7 @@ package parser
 
 import "github.com/jackspirou/chip/token"
 
-// Next Conjunction. Parse a conjunction.
+// nextConjunction parses a conjunction.
 func (p *Parser) nextConjunction() {
 	p.enter()
 	p.nextComparison()

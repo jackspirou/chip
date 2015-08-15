@@ -2,7 +2,7 @@ package parser
 
 import "github.com/jackspirou/chip/token"
 
-// Next Program. Parse the file (program) body.
+// nextProgram parses the file (program) body.
 func (p *Parser) nextProgram() {
 	p.enter()
 	for p.tok.Type != token.EOF {

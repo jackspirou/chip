@@ -2,7 +2,7 @@ package parser
 
 import "github.com/jackspirou/chip/token"
 
-// Next Statement. Parse a statement.
+// nextStatement parse a statement.
 func (p *Parser) nextStatement() {
 	p.enter()
 	switch p.tok.Type {

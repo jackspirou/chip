@@ -2,7 +2,7 @@ package parser
 
 import "github.com/jackspirou/chip/token"
 
-// Next Package. Parse a package name.
+// nextPackage parses a package name.
 func (p *Parser) nextPackage() {
 	p.enter()
 	p.nextExpected(token.PACKAGE)

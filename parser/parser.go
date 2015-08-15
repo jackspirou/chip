@@ -1,9 +1,9 @@
 package parser
 
 import (
-	"errors"
 	"fmt"
 	"io"
+	"log"
 	"time"
 
 	"github.com/jackspirou/chip/scanner"
@@ -12,14 +12,14 @@ import (
 	"github.com/jackspirou/chip/token"
 )
 
-// Parser represents a parser for reading chip source files.
+// Parser describes a parser for reading chip source files.
 type Parser struct {
+	Tracing bool
+	level   int // recursion level
 	scan    *scanner.Scanner
 	tok     token.Token
 	alloc   *ssa.Allocator
-	level   int // recursion level
 	scope   *scope.Scope
-	Tracing bool
 }
 
 // New returns a new Parser object.
@@ -43,27 +43,23 @@ func New(src io.Reader) (*Parser, error) {
 }
 
 // Parse starts Parser parsing.
-func (p *Parser) Parse() error {
+func (p *Parser) Parse() {
 	start := time.Now()
-	if err := p.parse(); err != nil {
-		return err
-	}
+	p.parse()
 	end := time.Now()
 	duration := end.Sub(start)
 	fmt.Println(duration)
-	return nil
 }
 
-func (p *Parser) parse() error { return p.nextFile() }
+func (p *Parser) parse() { p.nextFile() }
 
-func (p *Parser) next() error {
+func (p *Parser) next() {
 	tok := p.scan.Scan()
 	for tok.Type == token.COMMENT {
 		tok = p.scan.Scan()
 	}
 	if tok.Type == token.ERROR {
-		return errors.New(tok.String())
+		log.Fatal(tok.String())
 	}
 	p.tok = tok
-	return nil
 }

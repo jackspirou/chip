@@ -2,7 +2,7 @@ package parser
 
 import "github.com/jackspirou/chip/token"
 
-// Next Return. Parse a return.
+// nextReturn parses a return.
 func (p *Parser) nextReturn() {
 	p.enter()
 	p.nextExpected(token.RETURN)

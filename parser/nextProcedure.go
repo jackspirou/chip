@@ -1,6 +1,6 @@
 package parser
 
-// Next Procedure. Parse a procedure.
+// nextProcedure parses a procedure.
 func (p *Parser) nextProcedure() {
 	p.enter()
 	p.scope.Open()

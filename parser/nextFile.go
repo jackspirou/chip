@@ -1,6 +1,6 @@
 package parser
 
-// Next File. Parse a source file.
+// nextFile parses a source file.
 func (p *Parser) nextFile() error {
 	p.enter()
 	p.nextPackage()

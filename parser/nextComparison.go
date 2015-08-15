@@ -4,7 +4,7 @@ import (
 	"github.com/jackspirou/chip/token"
 )
 
-// Next Comparison. Parse a comparison.
+// nextComparison parses a comparison.
 func (p *Parser) nextComparison() {
 	p.enter()
 	p.nextSum()

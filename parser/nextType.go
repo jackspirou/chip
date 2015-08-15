@@ -7,7 +7,7 @@ import (
 	"github.com/jackspirou/chip/types"
 )
 
-// Next Type.  Parse the next type token.
+// nextType parses a type token.
 func (p *Parser) nextType() types.Typer {
 	p.enter()
 	var t types.Typer

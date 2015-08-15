@@ -2,7 +2,7 @@ package parser
 
 import "github.com/jackspirou/chip/token"
 
-// Next Sum. Parse a sum.
+// nextSum parse a sum.
 func (p *Parser) nextSum() {
 	p.enter()
 	p.nextProduct()

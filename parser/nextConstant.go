@@ -2,7 +2,7 @@ package parser
 
 import "github.com/jackspirou/chip/token"
 
-// Next Constant. Parse a constant.
+// nextConstant parses a constant.
 func (p *Parser) nextConstant() {
 	p.enter()
 	p.nextExpected(token.CONST)

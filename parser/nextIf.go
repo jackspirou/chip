@@ -2,7 +2,7 @@ package parser
 
 import "github.com/jackspirou/chip/token"
 
-// Next If. Parse an if statement.
+// nextIf parses an if statement.
 func (p *Parser) nextIf() {
 	p.enter()
 	for true {

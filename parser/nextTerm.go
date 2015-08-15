@@ -2,7 +2,7 @@ package parser
 
 import "github.com/jackspirou/chip/token"
 
-// Next Term. Parse a term.
+// nextTerm parses a term.
 func (p *Parser) nextTerm() {
 	p.enter()
 	p.nextUnit()

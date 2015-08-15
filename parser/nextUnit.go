@@ -2,7 +2,7 @@ package parser
 
 import "github.com/jackspirou/chip/token"
 
-// Next Unit. Parse a unit.
+// nextUnit parses a unit.
 func (p *Parser) nextUnit() {
 	p.enter()
 	switch p.tok.Type {

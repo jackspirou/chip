@@ -2,7 +2,7 @@ package parser
 
 import "github.com/jackspirou/chip/token"
 
-// Next Product. Parse a product.
+// nextProduct parses a product.
 func (p *Parser) nextProduct() {
 	p.enter()
 	p.nextTerm()
