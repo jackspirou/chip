@@ -5,7 +5,8 @@ import "github.com/jackspirou/chip/token"
 // nextPackage parses a package name.
 func (p *Parser) nextPackage() {
 	p.enter()
-	p.nextExpected(token.PACKAGE)
-	p.nextExpected(token.IDENT)
+	if p.tok.Type == token.PACKAGE {
+		p.nextExpected(token.IDENT)
+	}
 	p.exit()
 }
