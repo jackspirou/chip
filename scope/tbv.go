@@ -1,5 +1,5 @@
 //
-// Tbv = Trust But Verify
+// TBV = Trust But Verify
 // en.wikipedia.org/wiki/Trust,_but_verify
 //
 // Доверяй, но проверяй
@@ -23,7 +23,6 @@ import (
 // can be trusted/executed durring recursive decent parsing, but also verified.
 type TBV struct {
 	table map[string]node.Node
-	typ   types.Typer
 }
 
 // NewTBV returns a new TBV object.
@@ -31,16 +30,11 @@ func NewTBV() *TBV {
 	return &TBV{table: make(map[string]node.Node)}
 }
 
-// Imply something about a type. I say 'something' because I forgot why this
-// was written to begin with. I'll remove it later... hopefully.
-func (t *TBV) Imply(typ types.Typer) {
-	t.typ = typ
-}
-
-// Type returns the type that was implied. If the Imply method is removed, so
-// should this method be removed.
-func (t TBV) Type() types.Typer {
-	return t.typ
+// Contains checks if a token name appears in TBV table.
+func (t TBV) Contains(token fmt.Stringer) bool {
+	name := token.String()
+	_, ok := t.table[name]
+	return ok
 }
 
 // Trust takes a name token and node that has not yet been defined and "trusts"
