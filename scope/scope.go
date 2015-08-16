@@ -36,14 +36,14 @@ func (s *Scope) Close() (SymTab, error) {
 }
 
 // Global sets a node and its name in the global scope.
-func (s *Scope) Global(nameToken fmt.Stringer, n node.Node) error {
-	name := nameToken.String()
+func (s *Scope) Global(token fmt.Stringer, n node.Node) error {
+	name := token.String()
 	symtab, err := s.stack.bottom()
 	if err != nil {
 		return err
 	}
 	if symtab.contains(name) {
-		return fmt.Errorf("'%s' cannot be declared globally twice", name)
+		return fmt.Errorf("'%s' already declared globally", name)
 	}
 	err = symtab.set(name, n)
 	if err != nil {
@@ -71,14 +71,14 @@ func (s *Scope) Lookup(name string) (node.Node, error) {
 			return symtab.get(name)
 		}
 	}
-	return nil, fmt.Errorf("'%s' has not yet been declared", name)
+	return nil, fmt.Errorf("'%s' not yet declared", name)
 }
 
 // Add adds a name to the topmost scope in the scope stack.
-func (s *Scope) Add(nameToken fmt.Stringer, n node.Node) error {
-	name := nameToken.String()
+func (s *Scope) Add(token fmt.Stringer, n node.Node) error {
+	name := token.String()
 	if s.Contains(name) {
-		return fmt.Errorf("'%s' cannot be declared twice", name)
+		return fmt.Errorf("'%s' already declared", name)
 	}
 	symtab, err := s.stack.peek()
 	if err != nil {

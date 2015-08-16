@@ -26,9 +26,9 @@ type Label struct {
 // not end with a digit. If no prefix is given, then the default is used.
 //
 // Label is initially not initally placed.
-func NewLabel(prefixToken fmt.Stringer) *Label {
+func NewLabel(token fmt.Stringer) *Label {
 
-	prefix := prefixToken.String()
+	prefix := token.String()
 
 	l := &Label{
 		count:  count,

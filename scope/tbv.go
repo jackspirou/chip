@@ -11,6 +11,7 @@ package scope
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/jackspirou/chip/node"
 	"github.com/jackspirou/chip/types"
@@ -30,15 +31,23 @@ func NewTBV() *TBV {
 	return &TBV{table: make(map[string]node.Node)}
 }
 
+// Imply something about a type. I say 'something' because I forgot why this
+// was written to begin with. I'll remove it later... hopefully.
 func (t *TBV) Imply(typ types.Typer) {
 	t.typ = typ
 }
 
-func (t *TBV) Type() types.Typer {
+// Type returns the type that was implied. If the Imply method is removed, so
+// should this method be removed.
+func (t TBV) Type() types.Typer {
 	return t.typ
 }
 
-func (t *TBV) Trust(name string, node node.Node) {
+// Trust takes a name token and node that has not yet been defined and "trusts"
+// that it will be defined later according to the node type values that were
+// implied by the parser.
+func (t *TBV) Trust(token fmt.Stringer, node node.Node) {
+	name := token.String()
 	if _, ok := t.table[name]; ok {
 		// p.enter()("'" + name + "' is already being trusted.")
 	} else {
@@ -46,7 +55,11 @@ func (t *TBV) Trust(name string, node node.Node) {
 	}
 }
 
-func (t *TBV) Check(name string, node node.Node) (bool, error) {
+// Verify verifies that the provided token and node match with a corresponding
+// pair that were trusted previously.
+func (t *TBV) Verify(token fmt.Stringer, node node.Node) (bool, error) {
+
+	name := token.String()
 
 	// is the node is present in the TBV table
 	if trustedNode, ok := t.table[name]; ok {
@@ -74,8 +87,4 @@ func (t *TBV) Check(name string, node node.Node) (bool, error) {
 		return true, nil
 	}
 	return false, nil
-}
-
-func (t *TBV) Verify() {
-	// p.enter()("VERIFYING....")
 }
