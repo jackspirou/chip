@@ -36,7 +36,8 @@ func (s *Scope) Close() (SymTab, error) {
 }
 
 // Global sets a node and its name in the global scope.
-func (s *Scope) Global(name string, n node.Node) error {
+func (s *Scope) Global(nameToken fmt.Stringer, n node.Node) error {
+	name := nameToken.String()
 	symtab, err := s.stack.bottom()
 	if err != nil {
 		return err

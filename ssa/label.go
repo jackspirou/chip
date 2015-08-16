@@ -1,6 +1,7 @@
 package ssa
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"unicode"
@@ -25,7 +26,9 @@ type Label struct {
 // not end with a digit. If no prefix is given, then the default is used.
 //
 // Label is initially not initally placed.
-func NewLabel(prefix string) *Label {
+func NewLabel(prefixToken fmt.Stringer) *Label {
+
+	prefix := prefixToken.String()
 
 	l := &Label{
 		count:  count,

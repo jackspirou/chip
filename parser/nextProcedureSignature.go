@@ -12,7 +12,7 @@ func (p *Parser) nextProcedureSignature() {
 	p.enter()
 
 	p.nextExpected(token.FUNC)
-	nameTok := p.tok
+	ProcNameTok := p.tok
 	p.nextExpected(token.IDENT) // skip proc name
 	p.nextExpected(token.LPAREN)
 	proc := types.NewProc()
@@ -50,12 +50,11 @@ func (p *Parser) nextProcedureSignature() {
 		}
 	}
 
-	label := ssa.NewLabel(nameTok.String())
+	label := ssa.NewLabel(ProcNameTok)
 	des := node.NewLabel(proc, label)
 
-	err := p.scope.Global(nameTok.String(), des)
-	if err != nil {
-		userErr(err, nameTok)
+	if err := p.scope.Global(ProcNameTok, des); err != nil {
+		userErr(err, ProcNameTok)
 	}
 	p.exit()
 }
