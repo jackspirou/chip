@@ -182,6 +182,7 @@ func (s *Scanner) switch4(tok0, tok1 token.Type, ch2 rune, tok2, tok3 token.Type
 
 // nextIdentifier sets a global token to next name.
 func (s *Scanner) nextIdentifier() token.Token {
+	pos := s.pos
 	buffer := bytes.NewBufferString("")
 
 	for letterOrDigit(s.char) {
@@ -193,13 +194,14 @@ func (s *Scanner) nextIdentifier() token.Token {
 
 	lit := buffer.String()
 	if len(lit) > 1 {
-		return token.New(token.Lookup(lit), lit, s.pos)
+		return token.New(token.Lookup(lit), lit, pos)
 	}
 	return token.New(token.IDENT, lit, s.pos)
 }
 
 // nextNumber parse a number.
 func (s *Scanner) nextNumber(decimal bool) token.Token {
+	pos := s.pos
 	if decimal {
 
 		buffer := bytes.NewBufferString(".")
@@ -210,7 +212,7 @@ func (s *Scanner) nextNumber(decimal bool) token.Token {
 				return token.New(token.ERROR, err.Error(), s.pos)
 			}
 		}
-		return token.New(token.FLOAT, buffer.String(), s.pos)
+		return token.New(token.FLOAT, buffer.String(), pos)
 	}
 
 	tok := token.INT
@@ -225,7 +227,7 @@ func (s *Scanner) nextNumber(decimal bool) token.Token {
 			return token.New(token.ERROR, err.Error(), s.pos)
 		}
 	}
-	return token.New(tok, buffer.String(), s.pos)
+	return token.New(tok, buffer.String(), pos)
 }
 
 // nextEOF parse a EOF.
@@ -235,6 +237,7 @@ func (s *Scanner) nextEOF() token.Token {
 
 // nextString parse a string constant.
 func (s *Scanner) nextString() token.Token {
+	pos := s.pos
 	buffer := bytes.NewBufferString("")
 
 	// skip '"'
@@ -250,12 +253,12 @@ func (s *Scanner) nextString() token.Token {
 	}
 
 	if s.char != '"' {
-		return token.New(token.ERROR, "string has no closing quote", s.pos)
+		return token.New(token.ERROR, "string has no closing quote", pos)
 	}
 	if err := s.next(); err != nil {
 		return token.New(token.ERROR, err.Error(), s.pos)
 	}
-	return token.New(token.STRING, buffer.String(), s.pos)
+	return token.New(token.STRING, buffer.String(), pos)
 }
 
 // nextColon parse a ':'.
@@ -280,13 +283,15 @@ func (s *Scanner) nextPeriod() token.Token {
 		return s.nextNumber(true)
 	}
 
+	pos := s.pos
+
 	if s.char == '.' {
 		if err := s.next(); err != nil {
 			return token.New(token.ERROR, err.Error(), s.pos)
 		}
 		if s.char == '.' {
 			s.next()
-			return token.New(token.ELLIPSIS, "...", s.pos)
+			return token.New(token.ELLIPSIS, "...", pos)
 		}
 		return token.New(token.ERROR, "unexpected "+string(s.char), s.pos)
 	}
@@ -390,7 +395,7 @@ func (s *Scanner) nextSlash() token.Token {
 
 // nextComment parse comment styles '//' or '/**/'.
 func (s *Scanner) nextComment() token.Token {
-
+	pos := s.pos
 	// '/' already consumed
 
 	buffer := bytes.NewBufferString("")
@@ -411,7 +416,7 @@ func (s *Scanner) nextComment() token.Token {
 				return token.New(token.ERROR, err.Error(), s.pos)
 			}
 		}
-		return token.New(token.COMMENT, buffer.String(), s.pos)
+		return token.New(token.COMMENT, buffer.String(), pos)
 	}
 
 	/*- style comment */
@@ -431,7 +436,7 @@ func (s *Scanner) nextComment() token.Token {
 		}
 		for s.char != reader.EOF {
 			if ch == '*' && s.char == '/' {
-				return token.New(token.COMMENT, buffer.String(), s.pos)
+				return token.New(token.COMMENT, buffer.String(), pos)
 			}
 
 			buffer.WriteRune(ch)

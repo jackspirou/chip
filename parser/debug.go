@@ -2,6 +2,9 @@ package parser
 
 import (
 	"fmt"
+	"os"
+
+	"github.com/jackspirou/chip/token"
 
 	"runtime"
 	"strings"
@@ -44,4 +47,10 @@ func debug() string {
 		return methodPathSlice[len(methodPathSlice)-1]
 	}
 	return "unknown"
+}
+
+// userErr formates an error nicely and writes to the terminal.
+func userErr(err error, tok token.Token) {
+	fmt.Printf("error: %s on line %d character %d \n", err, tok.Pos.Line, tok.Pos.Column)
+	os.Exit(1)
 }

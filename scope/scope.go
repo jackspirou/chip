@@ -36,19 +36,19 @@ func (s *Scope) Close() (SymTab, error) {
 }
 
 // Global sets a node and its name in the global scope.
-func (s *Scope) Global(name string, n node.Node) (bool, error) {
+func (s *Scope) Global(name string, n node.Node) error {
 	symtab, err := s.stack.bottom()
 	if err != nil {
-		return false, err
+		return err
 	}
 	if symtab.contains(name) {
-		return false, fmt.Errorf("'%s' cannot be declared globally twice", name)
+		return fmt.Errorf("'%s' cannot be declared globally twice", name)
 	}
 	err = symtab.set(name, n)
 	if err != nil {
-		return false, err
+		return err
 	}
-	return true, nil
+	return nil
 }
 
 // Contains checks if a node name appears in the current scope.

@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 
 	"github.com/jackspirou/chip/parser"
@@ -11,7 +10,6 @@ import (
 func main() {
 
 	path := "test/gcd.chp"
-	fmt.Println(path)
 
 	file, err := os.Open(path)
 	if err != nil {
@@ -24,8 +22,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	p.Tracing = true
 
 	p.Parse()
 

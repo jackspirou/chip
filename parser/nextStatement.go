@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/jackspirou/chip/token"
@@ -11,11 +12,12 @@ func (p *Parser) nextStatement() {
 	p.enter()
 	switch p.tok.Type {
 	case token.IDENT:
-		// p.tok.String() // var or proc name
+		nameTok := p.tok
+		fmt.Println(nameTok)
 		p.next()
 		for p.tok.Type == token.PERIOD {
 			p.next() // skip '.'
-			// p.tok.String() // var or proc name
+			// fmt.Println(p.tok)
 			p.nextExpected(token.IDENT)
 		}
 		if p.tok.Type.Assignment() {
@@ -32,9 +34,13 @@ func (p *Parser) nextStatement() {
 			case token.LPAREN:
 				p.next() // skip '('
 				if p.tok.Type != token.RPAREN {
+					paramTok := p.tok
+					fmt.Println(paramTok)
 					p.nextExpression()
 					for p.tok.Type == token.COMMA {
 						p.next() // skip ','
+						paramTok := p.tok
+						fmt.Println(paramTok)
 						p.nextExpression()
 					}
 				}

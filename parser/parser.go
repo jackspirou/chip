@@ -20,6 +20,7 @@ type Parser struct {
 	tok     token.Token
 	alloc   *ssa.Allocator
 	scope   *scope.Scope
+	tbv     *scope.TBV
 }
 
 // New returns a new Parser object.
@@ -34,6 +35,7 @@ func New(src io.Reader) (*Parser, error) {
 		tok:   token.NewEOF(),
 		alloc: ssa.NewAllocator(),
 		scope: scope.NewScope(),
+		tbv:   scope.NewTBV(),
 	}
 
 	p.next()
@@ -49,6 +51,7 @@ func (p *Parser) Parse() {
 	end := time.Now()
 	duration := end.Sub(start)
 	fmt.Println(duration)
+	fmt.Println(p.scope)
 }
 
 // parse start parsing the next source file.

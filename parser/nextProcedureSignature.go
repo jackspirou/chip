@@ -1,8 +1,6 @@
 package parser
 
 import (
-	"log"
-
 	"github.com/jackspirou/chip/node"
 	"github.com/jackspirou/chip/ssa"
 	"github.com/jackspirou/chip/token"
@@ -12,12 +10,12 @@ import (
 // nextProcedureSignature parses a procedure signature.
 func (p *Parser) nextProcedureSignature() {
 	p.enter()
+
 	p.nextExpected(token.FUNC)
-	name := p.tok.String()
+	nameTok := p.tok
 	p.nextExpected(token.IDENT) // skip proc name
 	p.nextExpected(token.LPAREN)
 	proc := types.NewProc()
-
 	if p.tok.Type != token.RPAREN {
 		pname := p.tok.String()
 		p.nextExpected(token.IDENT) // skip param name
@@ -52,12 +50,12 @@ func (p *Parser) nextProcedureSignature() {
 		}
 	}
 
-	label := ssa.NewLabel(name)
+	label := ssa.NewLabel(nameTok.String())
 	des := node.NewLabel(proc, label)
 
-	_, err := p.scope.Global(name, des)
+	err := p.scope.Global(nameTok.String(), des)
 	if err != nil {
-		log.Fatal(err)
+		userErr(err, nameTok)
 	}
 	p.exit()
 }
