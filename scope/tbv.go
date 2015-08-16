@@ -51,19 +51,19 @@ func (t *TBV) Check(name string, node node.Node) (bool, error) {
 	// is the node is present in the TBV table
 	if trustedNode, ok := t.table[name]; ok {
 
-		trustedProc := trustedNode.Type().(*types.Func)
-		proc := node.Type().(*types.Func)
+		trustedFunc := trustedNode.Type().(*types.Func)
+		fn := node.Type().(*types.Func)
 
-		if trustedProc.Value() != nil {
-			if trustedProc.Value().Type() != proc.Value().Type() {
-				return false, errors.New("The function '" + name + "' must return either a type " + trustedProc.Value().String() + " or " + proc.Value().String() + ". Not both.")
+		if trustedFunc.Value() != nil {
+			if trustedFunc.Value().Type() != fn.Value().Type() {
+				return false, errors.New("The function '" + name + "' must return either a type " + trustedFunc.Value().String() + " or " + fn.Value().String() + ". Not both.")
 			}
 		}
-		if trustedProc.Arity() != proc.Arity() {
+		if trustedFunc.Arity() != fn.Arity() {
 			return false, errors.New("Number of arguments do not match.")
 		}
-		trustedParam := trustedProc.Param()
-		param := proc.Param()
+		trustedParam := trustedFunc.Param()
+		param := fn.Param()
 		for param != nil {
 			if param.Type() != trustedParam.Type() {
 				return false, errors.New("Parameter types are off.")

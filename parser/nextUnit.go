@@ -11,7 +11,7 @@ func (p *Parser) nextUnit() {
 	p.enter()
 	switch p.tok.Type {
 	case token.IDENT:
-		// p.tok.String() // var or proc name
+		// p.tok.String() // var or func name
 		p.next()
 		if p.tok.Type == token.LPAREN {
 			p.next() // skip '('
