@@ -1,6 +1,8 @@
 package node
 
 import (
+	"fmt"
+
 	"github.com/jackspirou/chip/ssa"
 	"github.com/jackspirou/chip/types"
 )
@@ -19,8 +21,9 @@ func (r *Reg) Type() types.Typer {
 	return r.typ
 }
 
-func (r *Reg) String() string {
-	return "[RegNode " + r.typ.String() + " " + r.reg.String() + "]"
+// String impliments the fmt.Stringer interface.
+func (r Reg) String() string {
+	return fmt.Sprintf("[RegNode %s %s ]", r.typ, r.reg)
 }
 
 func (r *Reg) Reg() *ssa.Register {

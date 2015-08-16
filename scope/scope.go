@@ -92,6 +92,6 @@ func (s *Scope) Add(nameToken fmt.Stringer, n node.Node) error {
 }
 
 // String impliments the fmt.Stringer interface.
-func (s *Scope) String() string {
+func (s Scope) String() string {
 	return s.stack.String()
 }

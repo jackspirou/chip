@@ -19,6 +19,6 @@ func (b *Basic) Type() token.Type {
 }
 
 // String satisfies the fmt.Stringer interface.
-func (b *Basic) String() string {
+func (b Basic) String() string {
 	return b.name
 }

@@ -69,6 +69,6 @@ func (r *Register) Used() bool {
 }
 
 // String satisfies the fmt.Stringer interface.
-func (r *Register) String() string {
+func (r Register) String() string {
 	return r.name
 }

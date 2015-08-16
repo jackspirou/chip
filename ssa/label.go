@@ -81,6 +81,6 @@ func (l *Label) Place() {
 }
 
 // String impliments the fmt.Stringer interface.
-func (l *Label) String() string {
+func (l Label) String() string {
 	return l.name
 }

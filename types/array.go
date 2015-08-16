@@ -1,6 +1,10 @@
 package types
 
-import "github.com/jackspirou/chip/token"
+import (
+	"fmt"
+
+	"github.com/jackspirou/chip/token"
+)
 
 // Array describes an array type.
 type Array struct {
@@ -19,6 +23,6 @@ func (a *Array) Type() token.Type {
 }
 
 // String satisfies the fmt.Stringer interface.
-func (a *Array) String() string {
-	return a.name + " array"
+func (a Array) String() string {
+	return fmt.Sprintf("%s array", a.name)
 }

@@ -1,6 +1,8 @@
 package node
 
 import (
+	"fmt"
+
 	"github.com/jackspirou/chip/ssa"
 	"github.com/jackspirou/chip/types"
 )
@@ -37,6 +39,6 @@ func (l *Label) Type() types.Typer {
 }
 
 // String satisfies the fmt.Stringer interface.
-func (l *Label) String() string {
-	return "[LabelNode " + l.typ.String() + " " + l.label.String() + "]"
+func (l Label) String() string {
+	return fmt.Sprintf("[LabelNode %s %s ]", l.typ, l.label)
 }
