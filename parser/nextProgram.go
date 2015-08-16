@@ -7,7 +7,7 @@ func (p *Parser) nextProgram() {
 	p.enter()
 	for p.tok.Type != token.EOF {
 		if p.tok.Type == token.FUNC {
-			p.nextProcedure()
+			p.nextFunction()
 		} else {
 			p.nextStatement()
 		}

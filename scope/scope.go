@@ -75,7 +75,8 @@ func (s *Scope) Lookup(name string) (node.Node, error) {
 }
 
 // Add adds a name to the topmost scope in the scope stack.
-func (s *Scope) Add(name string, n node.Node) error {
+func (s *Scope) Add(nameToken fmt.Stringer, n node.Node) error {
+	name := nameToken.String()
 	if s.Contains(name) {
 		return fmt.Errorf("'%s' cannot be declared twice", name)
 	}

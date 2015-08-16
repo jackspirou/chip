@@ -47,10 +47,12 @@ func (t *TBV) Trust(name string, node node.Node) {
 }
 
 func (t *TBV) Check(name string, node node.Node) (bool, error) {
+
+	// is the node is present in the TBV table
 	if trustedNode, ok := t.table[name]; ok {
 
-		trustedProc := trustedNode.Type().(*types.Proc)
-		proc := node.Type().(*types.Proc)
+		trustedProc := trustedNode.Type().(*types.Func)
+		proc := node.Type().(*types.Func)
 
 		if trustedProc.Value() != nil {
 			if trustedProc.Value().Type() != proc.Value().Type() {

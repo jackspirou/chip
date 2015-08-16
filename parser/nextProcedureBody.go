@@ -2,8 +2,8 @@ package parser
 
 import "github.com/jackspirou/chip/token"
 
-// nextProcedureBody parses a procedure body.
-func (p *Parser) nextProcedureBody() {
+// nextFunctionBody parses a function body.
+func (p *Parser) nextFunctionBody() {
 	p.enter()
 	p.nextExpected(token.LBRACE)
 	p.nextStatement()
