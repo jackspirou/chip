@@ -13,6 +13,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/jackspirou/chip/token"
+
 	"github.com/jackspirou/chip/node"
 	"github.com/jackspirou/chip/types"
 )
@@ -51,9 +53,9 @@ func (t *TBV) Trust(token fmt.Stringer, node node.Node) {
 
 // Verify verifies that the provided token and node match with a corresponding
 // pair that were trusted previously.
-func (t *TBV) Verify(token fmt.Stringer, node node.Node) (bool, error) {
+func (t *TBV) Verify(tok fmt.Stringer, node node.Node) (bool, error) {
 
-	name := token.String()
+	name := tok.String()
 
 	// check if the node is present in the TBV table
 	if trustNode, ok := t.table[name]; ok {
@@ -62,31 +64,31 @@ func (t *TBV) Verify(token fmt.Stringer, node node.Node) (bool, error) {
 			return true, errors.New("mismatch types")
 		}
 
-		//		switch trustNode.Type().(type) {
-		//		case types.Func:
+		switch trustNode.Type().Type() {
+		case token.FUNC:
 
-		trustFuncType := trustNode.Type().(*types.Func)
-		funcType := node.Type().(*types.Func)
+			trustFuncType := trustNode.Type().(*types.Func)
+			funcType := node.Type().(*types.Func)
 
-		if trustFuncType.Value() != nil {
-			if trustFuncType.Value().Type() != funcType.Value().Type() {
-				return false, errors.New("The function '" + name + "' must return either a type " + trustFuncType.Value().String() + " or " + funcType.Value().String() + ". Not both.")
+			if trustFuncType.Value() != nil {
+				if trustFuncType.Value().Type() != funcType.Value().Type() {
+					return false, errors.New("The function '" + name + "' must return either a type " + trustFuncType.Value().String() + " or " + funcType.Value().String() + ". Not both.")
+				}
 			}
-		}
-		if trustFuncType.Arity() != funcType.Arity() {
-			return false, errors.New("Number of arguments do not match.")
-		}
-		trustParam := trustFuncType.Param()
-		param := funcType.Param()
-		for param != nil {
-			if param.Type() != trustParam.Type() {
-				return false, errors.New("Parameter types are off.")
+			if trustFuncType.Arity() != funcType.Arity() {
+				return false, errors.New("Number of arguments do not match.")
 			}
-			param = param.Next()
-			trustParam = trustParam.Next()
+			trustParam := trustFuncType.Param()
+			param := funcType.Param()
+			for param != nil {
+				if param.Type() != trustParam.Type() {
+					return false, errors.New("Parameter types are off.")
+				}
+				param = param.Next()
+				trustParam = trustParam.Next()
+			}
+			return true, nil
 		}
-		return true, nil
 	}
-	//	}
 	return false, nil
 }
