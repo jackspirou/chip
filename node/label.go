@@ -33,12 +33,12 @@ func (l Label) Label() *ssa.Label {
 	return l.label
 }
 
-// Label returns the ssa.Label.
+// Type returns the ssa.Label.
 func (l *Label) Type() types.Typer {
 	return l.typ
 }
 
 // String satisfies the fmt.Stringer interface.
 func (l Label) String() string {
-	return fmt.Sprintf("[LabelNode %s %s ]", l.Type, l.label)
+	return fmt.Sprintf("[LabelNode %s %s ]", l.typ, l.label)
 }
