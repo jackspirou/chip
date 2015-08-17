@@ -98,12 +98,9 @@ func (p *Parser) nextFunctionSignature() {
 	label := ssa.NewLabel(funcNameTok)
 	funcSigNode := node.NewLabel(funcSigType, label)
 
-	if p.tbv.Contains(funcNameTok) {
-		if ok, err := p.tbv.Verify(funcNameTok, funcSigNode); ok && err != nil {
-			userErr(err, funcNameTok)
-		}
-		p.exit()
-		return
+	// check any previous type declarations via TBV
+	if ok, err := p.tbv.Verify(funcNameTok, funcSigNode); ok && err != nil {
+		userErr(err, funcNameTok)
 	}
 
 	// set the func signature node to the global scope and check for user error

@@ -55,30 +55,38 @@ func (t *TBV) Verify(token fmt.Stringer, node node.Node) (bool, error) {
 
 	name := token.String()
 
-	// is the node is present in the TBV table
-	if trustedNode, ok := t.table[name]; ok {
+	// check if the node is present in the TBV table
+	if trustNode, ok := t.table[name]; ok {
 
-		trustedFunc := trustedNode.Type().(*types.Func)
-		fn := node.Type().(*types.Func)
+		if trustNode.Type() != node.Type() {
+			return true, errors.New("mismatch types")
+		}
 
-		if trustedFunc.Value() != nil {
-			if trustedFunc.Value().Type() != fn.Value().Type() {
-				return false, errors.New("The function '" + name + "' must return either a type " + trustedFunc.Value().String() + " or " + fn.Value().String() + ". Not both.")
+		//		switch trustNode.Type().(type) {
+		//		case types.Func:
+
+		trustFuncType := trustNode.Type().(*types.Func)
+		funcType := node.Type().(*types.Func)
+
+		if trustFuncType.Value() != nil {
+			if trustFuncType.Value().Type() != funcType.Value().Type() {
+				return false, errors.New("The function '" + name + "' must return either a type " + trustFuncType.Value().String() + " or " + funcType.Value().String() + ". Not both.")
 			}
 		}
-		if trustedFunc.Arity() != fn.Arity() {
+		if trustFuncType.Arity() != funcType.Arity() {
 			return false, errors.New("Number of arguments do not match.")
 		}
-		trustedParam := trustedFunc.Param()
-		param := fn.Param()
+		trustParam := trustFuncType.Param()
+		param := funcType.Param()
 		for param != nil {
-			if param.Type() != trustedParam.Type() {
+			if param.Type() != trustParam.Type() {
 				return false, errors.New("Parameter types are off.")
 			}
 			param = param.Next()
-			trustedParam = trustedParam.Next()
+			trustParam = trustParam.Next()
 		}
 		return true, nil
 	}
+	//	}
 	return false, nil
 }

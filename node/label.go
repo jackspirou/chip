@@ -29,16 +29,16 @@ func (l *Label) Rvalue() string {
 }
 
 // Label returns the ssa.Label.
-func (l *Label) Label() *ssa.Label {
+func (l Label) Label() *ssa.Label {
 	return l.label
 }
 
-// Type returns the label type.
+// Label returns the ssa.Label.
 func (l *Label) Type() types.Typer {
 	return l.typ
 }
 
 // String satisfies the fmt.Stringer interface.
 func (l Label) String() string {
-	return fmt.Sprintf("[LabelNode %s %s ]", l.typ, l.label)
+	return fmt.Sprintf("[LabelNode %s %s ]", l.Type, l.label)
 }
