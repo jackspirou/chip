@@ -17,9 +17,14 @@ func NewArray(basic Basic) *Array {
 	return &Array{basic, basic.String()}
 }
 
-// Type returns the token.Type.
-func (a *Array) Type() token.Type {
-	return a.basic.Type()
+// Token returns the token.Type.
+func (a *Array) Token() token.Type {
+	return a.basic.Token()
+}
+
+// Value returns the array type value.
+func (a *Array) Value() Typer {
+	return a.basic
 }
 
 // String satisfies the fmt.Stringer interface.

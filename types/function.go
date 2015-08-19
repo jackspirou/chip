@@ -33,6 +33,11 @@ func (f *Func) Value() Typer {
 	return f.value
 }
 
+// Token returns the function token.Type.
+func (f *Func) Token() token.Type {
+	return token.FUNC
+}
+
 // Arity returns the number of parameters in this function.
 func (f *Func) Arity() int {
 	return f.arity
@@ -41,11 +46,6 @@ func (f *Func) Arity() int {
 // Param returns the first parameter of this function.
 func (f *Func) Param() *Param {
 	return f.first.next
-}
-
-// Type returns the token type of this function.
-func (f *Func) Type() token.Type {
-	return f.value.Type()
 }
 
 // String satisfies the fmt.Stringer interface.

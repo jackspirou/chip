@@ -4,6 +4,7 @@ import "github.com/jackspirou/chip/token"
 
 // Typer represents a type.
 type Typer interface {
-	Type() token.Type
+	Token() token.Type
+	Value() Typer
 	String() string
 }

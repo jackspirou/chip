@@ -14,9 +14,14 @@ func newParam(typ Typer) *Param {
 	return &Param{typ: typ, name: typ.String()}
 }
 
-// Type returns the parameter's type.
-func (p Param) Type() token.Type {
-	return p.typ.Type()
+// Value returns the parameter's token type.
+func (p Param) Value() Typer {
+	return p.typ
+}
+
+// Token returns the token.Type.
+func (p Param) Token() token.Type {
+	return p.typ.Token()
 }
 
 // String impliments the fmt.Stringer interface and returns the name of the

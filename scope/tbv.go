@@ -64,14 +64,14 @@ func (t *TBV) Verify(tok fmt.Stringer, node node.Node) (bool, error) {
 			return true, errors.New("mismatch types")
 		}
 
-		switch trustNode.Type().Type() {
+		switch trustNode.Type().Token() {
 		case token.FUNC:
 
 			trustFuncType := trustNode.Type().(*types.Func)
 			funcType := node.Type().(*types.Func)
 
 			if trustFuncType.Value() != nil {
-				if trustFuncType.Value().Type() != funcType.Value().Type() {
+				if trustFuncType.Value() != funcType.Value() {
 					return false, errors.New("The function '" + name + "' must return either a type " + trustFuncType.Value().String() + " or " + funcType.Value().String() + ". Not both.")
 				}
 			}
@@ -81,7 +81,7 @@ func (t *TBV) Verify(tok fmt.Stringer, node node.Node) (bool, error) {
 			trustParam := trustFuncType.Param()
 			param := funcType.Param()
 			for param != nil {
-				if param.Type() != trustParam.Type() {
+				if param != trustParam {
 					return false, errors.New("Parameter types are off.")
 				}
 				param = param.Next()

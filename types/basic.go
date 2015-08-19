@@ -13,9 +13,13 @@ func NewBasic(tok token.Type) *Basic {
 	return &Basic{tok, tok.String()}
 }
 
-// Type returns the token.Type.
-func (b *Basic) Type() token.Type {
+// Token returns the token.Type.
+func (b Basic) Token() token.Type {
 	return b.tok
+}
+
+func (b Basic) Value() Typer {
+	return b
 }
 
 // String satisfies the fmt.Stringer interface.
