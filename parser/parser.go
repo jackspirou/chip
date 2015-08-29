@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/jackspirou/chip/parser/scanner"
+	"github.com/jackspirou/chip/parser/token"
 	"github.com/jackspirou/chip/scope"
 	"github.com/jackspirou/chip/ssa"
-	"github.com/jackspirou/chip/parser/token"
 )
 
 // Parser describes a parser for reading chip source files.
@@ -18,7 +18,7 @@ type Parser struct {
 	level   int // recursion level
 	scan    *scanner.Scanner
 	tok     token.Token
-	alloc   *ssa.Allocator
+	alloc   *ssa.Alloc
 	scope   *scope.Scope
 	tbv     *scope.TBV
 }
@@ -33,7 +33,7 @@ func New(src io.Reader) (*Parser, error) {
 	p := &Parser{
 		scan:  scan,
 		tok:   token.NewEOF(),
-		alloc: ssa.NewAllocator(),
+		alloc: ssa.NewAlloc(),
 		scope: scope.NewScope(),
 		tbv:   scope.NewTBV(),
 	}

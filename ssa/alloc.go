@@ -5,16 +5,16 @@ import (
 	"strconv"
 )
 
-// Allocator describes an allocator for registers.
-type Allocator struct {
+// Alloc describes an allocator for registers.
+type Alloc struct {
 	registers *Register // Linked stack of Register's to be allocated.
 	Zero      *Register
 	counter   int
 }
 
-// NewAllocator returns a new Allocator object.
-func NewAllocator() *Allocator {
-	return &Allocator{
+// NewAlloc returns a new Allocator object.
+func NewAlloc() *Alloc {
+	return &Alloc{
 		registers: NewRegister("$r0", NewRegister("$r1", nil, false), false),
 		Zero:      NewRegister("$zero", nil, true),
 		counter:   1,
@@ -22,7 +22,7 @@ func NewAllocator() *Allocator {
 }
 
 // Request requests a register.
-func (a *Allocator) Request() *Register {
+func (a *Alloc) Request() *Register {
 
 	if a.registers.next == nil {
 		a.counter++
@@ -39,7 +39,7 @@ func (a *Allocator) Request() *Register {
 }
 
 // Release releaes a register.
-func (a *Allocator) Release(reg *Register) {
+func (a *Alloc) Release(reg *Register) {
 	if !reg.Used() {
 		log.Fatal("empty stack exception")
 	}
