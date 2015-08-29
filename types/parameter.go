@@ -1,6 +1,6 @@
 package types
 
-import "github.com/jackspirou/chip/token"
+import "github.com/jackspirou/chip/parser/token"
 
 // Param describes a parameter type.
 type Param struct {

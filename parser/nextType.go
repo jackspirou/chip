@@ -4,7 +4,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/jackspirou/chip/token"
+	"github.com/jackspirou/chip/parser/token"
 	"github.com/jackspirou/chip/types"
 )
 

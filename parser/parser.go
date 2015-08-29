@@ -6,10 +6,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/jackspirou/chip/scanner"
+	"github.com/jackspirou/chip/parser/scanner"
 	"github.com/jackspirou/chip/scope"
 	"github.com/jackspirou/chip/ssa"
-	"github.com/jackspirou/chip/token"
+	"github.com/jackspirou/chip/parser/token"
 )
 
 // Parser describes a parser for reading chip source files.

@@ -1,9 +1,8 @@
 package parser
 
 import (
-	"github.com/jackspirou/chip/node"
 	"github.com/jackspirou/chip/ssa"
-	"github.com/jackspirou/chip/token"
+	"github.com/jackspirou/chip/parser/token"
 	"github.com/jackspirou/chip/types"
 )
 
@@ -40,7 +39,7 @@ func (p *Parser) nextFunctionSignature() {
 
 		// allocate a register and create a new register node
 		reg := p.alloc.Request()
-		regNode := node.NewReg(paramType, reg)
+		regNode := ssa.NewRegNode(paramType, reg)
 
 		// add the parameter name token and register node to the current scope
 		p.scope.Add(paramNameTok, regNode)
@@ -63,7 +62,7 @@ func (p *Parser) nextFunctionSignature() {
 
 			// allocate a register and create a new register node
 			reg = p.alloc.Request()
-			regNode = node.NewReg(paramType, reg)
+			regNode = ssa.NewRegNode(paramType, reg)
 
 			// add the parameter name token and register node to the current scope
 			p.scope.Add(paramNameTok, regNode)
@@ -95,8 +94,8 @@ func (p *Parser) nextFunctionSignature() {
 	}
 
 	// create a func signature label and node
-	label := ssa.NewLabel(funcNameTok)
-	funcSigNode := node.NewLabel(funcSigType, label)
+	label := ssa.NewLabel(funcNameTok.String())
+	funcSigNode := ssa.NewLabelNode(funcSigType, label)
 
 	// check any previous type declarations via TBV
 	if ok, err := p.tbv.Verify(funcNameTok, funcSigNode); ok && err != nil {

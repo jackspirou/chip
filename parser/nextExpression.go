@@ -1,14 +1,49 @@
 package parser
 
-import "github.com/jackspirou/chip/token"
+import (
+	"fmt"
+
+	"github.com/jackspirou/chip/ssa"
+	"github.com/jackspirou/chip/parser/token"
+)
 
 // nextExpression parses an expression.
-func (p *Parser) nextExpression() {
+func (p *Parser) nextExpression() ssa.Node {
 	p.enter()
-	p.nextConjunction()
-	for p.tok.Type == token.LOR {
-		p.next() // skip '||'
-		p.nextConjunction()
+
+	fmt.Println(p.tok)
+	leftRegNode := p.nextConjunction()
+	fmt.Println(p.tok)
+
+	label := ssa.NewLabel("expression")
+	fmt.Println(label)
+
+	found := false
+	if p.tok.Type == token.LOR {
+		found = true
+		// assembler.emit("sne", leftRegNode.Register(), alloc.Zero, label)
 	}
+
+	for p.tok.Type == token.LOR {
+
+		// check(leftRegNode, intType)
+
+		p.next() // skip '||'
+
+		des := p.nextConjunction()
+
+		fmt.Println(des)
+		// check(des, intType)
+
+		// assembler.emit("sne", leftRegNode.Register(), des.Register(), alloc.Zero)
+
+		// alloc.Release(des.Register())
+	}
+
+	if found {
+		// assembler.emit(label)
+	}
+
 	p.exit()
+	return leftRegNode
 }

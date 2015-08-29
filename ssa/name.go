@@ -1,7 +1,6 @@
-package node
+package ssa
 
 import (
-	"github.com/jackspirou/chip/ssa"
 	"github.com/jackspirou/chip/types"
 )
 
@@ -9,7 +8,7 @@ import (
 type Name interface {
 	Type() types.Typer
 	String() string
-	Label() *ssa.Label
+	Label() *Label
 	Lvalue() string
 	Rvalue() string
 }

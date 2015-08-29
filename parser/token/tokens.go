@@ -47,23 +47,25 @@ const (
 	AndNotAssign // &^=
 	assignEnd
 
-	LAND  // &&
-	LOR   // ||
-	ARROW // <-
-	INC   // ++
-	DEC   // --
+	LAND // &&
+	LOR  // ||
 
+	comparisonBegin
 	EQL    // ==
 	LSS    // <
 	GTR    // >
 	ASSIGN // =
 	NOT    // !
+	NEQ    // !=
+	LEQ    // <=
+	GEQ    // >=
+	comparisonEnd
 
-	NEQ      // !=
-	LEQ      // <=
-	GEQ      // >=
 	DEFINE   // :=
 	ELLIPSIS // ...
+	ARROW    // <-
+	INC      // ++
+	DEC      // --
 
 	LPAREN // (
 	LBRACK // [

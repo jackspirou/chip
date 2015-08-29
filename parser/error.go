@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jackspirou/chip/token"
+	"github.com/jackspirou/chip/parser/token"
 )
 
 // userErr formates an error nicely and writes to the terminal.

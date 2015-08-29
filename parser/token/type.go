@@ -58,18 +58,19 @@ func (t Type) Precedence() int {
 
 // Literal returns true for token types corresponding to identifiers and basic
 // type literals; it returns false otherwise.
-//
 func (t Type) Literal() bool { return literalBegin < t && t < literalEnd }
 
 // Operator returns true for token types corresponding to operators and
 // delimiters; it returns false otherwise.
-//
 func (t Type) Operator() bool { return operatorBegin < t && t < operatorEnd }
 
 // Assignment returns true for token types corresponding to assignments.
 func (t Type) Assignment() bool {
 	return (assignBegin < t && t < assignEnd) || t == ASSIGN || t == INC || t == DEC
 }
+
+// Comparison returns true of the token type is a comparision.
+func (t Type) Comparison() bool { return comparisonBegin < t && t < comparisonEnd }
 
 // Keyword returns true for token types corresponding to keywords; it returns
 // false otherwise.

@@ -1,4 +1,4 @@
-package node
+package ssa
 
 import "github.com/jackspirou/chip/types"
 

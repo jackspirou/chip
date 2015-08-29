@@ -3,7 +3,7 @@ package types
 import (
 	"fmt"
 
-	"github.com/jackspirou/chip/token"
+	"github.com/jackspirou/chip/parser/token"
 )
 
 // Array describes an array type.

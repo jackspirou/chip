@@ -7,8 +7,8 @@ import (
 	"io"
 	"unicode"
 
-	"github.com/jackspirou/chip/reader"
-	"github.com/jackspirou/chip/token"
+	"github.com/jackspirou/chip/parser/scanner/reader"
+	"github.com/jackspirou/chip/parser/token"
 )
 
 // Scanner describes a scanner to scan tokens from a UTF-8 io.Reader source.

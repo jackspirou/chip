@@ -23,6 +23,8 @@ func main() {
 		panic(err)
 	}
 
+	p.Tracing = true
+
 	p.Parse()
 
 }

@@ -3,7 +3,7 @@ package parser
 import (
 	"log"
 
-	"github.com/jackspirou/chip/token"
+	"github.com/jackspirou/chip/parser/token"
 )
 
 // nextExpected expects the next token to match the token.Type provided.

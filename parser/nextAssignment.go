@@ -1,6 +1,6 @@
 package parser
 
-import "github.com/jackspirou/chip/token"
+import "github.com/jackspirou/chip/parser/token"
 
 // nextAssignment parses the next assignment statement.
 func (p *Parser) nextAssignment() {

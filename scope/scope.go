@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/jackspirou/chip/node"
+	"github.com/jackspirou/chip/ssa"
 )
 
 // Scope describes multiple variable scopes.
@@ -36,7 +36,7 @@ func (s *Scope) Close() (SymTab, error) {
 }
 
 // Global sets a node and its name in the global scope.
-func (s *Scope) Global(token fmt.Stringer, n node.Node) error {
+func (s *Scope) Global(token fmt.Stringer, n ssa.Node) error {
 	name := token.String()
 	symtab, err := s.stack.bottom()
 	if err != nil {
@@ -62,7 +62,8 @@ func (s Scope) Contains(name string) bool {
 }
 
 // Lookup finds the first node in the current scope by name.
-func (s *Scope) Lookup(name string) (node.Node, error) {
+func (s *Scope) Lookup(token fmt.Stringer) (ssa.Node, error) {
+	name := token.String()
 	if s.Empty() {
 		return nil, fmt.Errorf("can't find a node '%s' in an empty scope stack", name)
 	}
@@ -75,7 +76,7 @@ func (s *Scope) Lookup(name string) (node.Node, error) {
 }
 
 // Add adds a name to the topmost scope in the scope stack.
-func (s *Scope) Add(token fmt.Stringer, n node.Node) error {
+func (s *Scope) Add(token fmt.Stringer, n ssa.Node) error {
 	name := token.String()
 	if s.Contains(name) {
 		return fmt.Errorf("'%s' already declared", name)
