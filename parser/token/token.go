@@ -1,5 +1,4 @@
-// Package token defines constants and types representing lexical tokens.
-//
+// Package token defines lexical tokens.
 package token
 
 // Token describes a lexical token.

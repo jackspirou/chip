@@ -1,4 +1,4 @@
-// Package reader reads UTF-8 characters from an io.Reader source.
+// Package reader reads characters from a UTF-8 io.Reader source.
 package reader
 
 import (
