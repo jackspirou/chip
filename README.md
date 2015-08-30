@@ -21,8 +21,7 @@ architecture implementations are not trivial. Simple is not trivial.
 Anyway, excited that Golang's spirit of lexical simplicity seemed to support
 the value I saw in SNARL, I was inspired to try writing a toy scripting
 language that was equal with, or exceeded the lexically simplicity of Go. It
-seemed obvious to leverage Golang for the implementation of this experimental
-idea.
+seemed obvious to leverage Golang for the implementation of this idea.
 
 With Go as a guide, I want to produce a toy scripting language that has extreme
 minimal syntax. I also want the Go implementation to be idiomatic.
