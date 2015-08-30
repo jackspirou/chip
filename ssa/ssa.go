@@ -1,3 +1,2 @@
-// Package ssa aims to produce static single assignment (SSA) three address
-// code (TAC) bytecode.
+// Package ssa describes TAC (three address code) bytecode.
 package ssa
