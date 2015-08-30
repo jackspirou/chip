@@ -11,7 +11,7 @@ While the SNARL compiler was a simple toy for academic purposes, I noticed the
 simplicity of it's design provided powerful foundations to explore.  
 
 A couple years later, I stumbled upon Golang and I was reminded of the same
-simplicity of SNARL. It was refreshing.
+simplicity of SNARL. It was refreshing having dealt with so much Java, and C++.
 
 It is important to note that while Golang is lexically simple, as a compiled
 language it  holds tremendous complexity around it's runtime
