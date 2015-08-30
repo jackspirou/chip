@@ -10,8 +10,7 @@ MIPS assembly (asm) code. Since we had no MIPS machines readily available, the
 asm then was ported and ran on a MIPS emulator.
 
 While the SNARL compiler was a simple toy for academic purposes, I noticed that
-the simplicity of it's design provided powerful foundations to explore further.  
-
+the simplicity of it's design provided powerful foundations to explore further.
 A couple years later, I stumbled upon Golang and I was reminded of the same
 simplicity of SNARL. It was refreshing having dealt with so much Java, and C++.
 
