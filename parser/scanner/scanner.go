@@ -1,4 +1,4 @@
-// Package scanner scans tokens from a UTF-8 io.reader source.
+// Package scanner scans tokens from a UTF-8 io.Reader.
 package scanner
 
 import (

@@ -1,4 +1,4 @@
-// Package parser performs token analysis on a UTF-8 io.reader source.
+// Package parser performs token analysis on a UTF-8 io.Reader.
 package parser
 
 import (
