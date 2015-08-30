@@ -1,3 +1,4 @@
+// Package scope manages lexical Block, Function, and Global scope.
 package scope
 
 import (
