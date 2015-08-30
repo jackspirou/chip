@@ -1,3 +1,4 @@
+// Package types describes built-in types.
 package types
 
 import "github.com/jackspirou/chip/parser/token"
