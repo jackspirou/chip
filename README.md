@@ -4,26 +4,26 @@ Chip is a toy systems scripting language.
 
 Motivation
 ----------
-Long ago I wrote a compiler in college in Java. It was for a two series
-compilers course. The language was known as SNARL and the compiler output was
-MIPS assembly (asm) code. Since we had no MIPS machines readily available, the
-asm then was ported and ran on a MIPS emulator.
+Long ago I wrote a compiler in Java. It was for a two-part college compilers
+course series. The language was known as SNARL and the compiler output was MIPS
+assembly (asm) code. Since we had no MIPS machines readily available, the
+asm then was ported to a MIPS emulator.
 
 While the SNARL compiler was a simple toy for academic purposes, I noticed that
 the simplicity of it's design provided powerful foundations to explore further.
-A couple years later, I stumbled upon Golang and I was reminded of the same
-simplicity of SNARL. It was refreshing having dealt with so much Java, and C++.
+A couple years later, I stumbled upon Golang and it reminded me of the same
+simplicity of SNARL. It was refreshing after writing lots of Java, and C++.
 
-It is important to note that while Golang is lexically simple, as a compiled
-language it's runtime (GC, green threads), CSP design, optimizations, and
-available target architectures implementations are not trivial.
+It is important to note that while Golang is lexically simple, it's runtime
+(GC, green threads), CSP design, optimizations, and available target hardware
+architecture implementations are not trivial. Simple is not trivial.
 
-Excited by Golang's spirit of simplicity, the same lexically as SNARL, I was
-inspired to try writing a lexically simple toy scripting language. It seemed
-obvious to leverage Golang to implement this experimental language.
+Anyway, excited that Golang's spirit of lexical simplicity seemed support the
+value I saw in SNARL, I was inspired to try writing a toy scripting language
+that was even more lexically simple than Golang. It seemed obvious to leverage
+Golang to implement this experimental idea.
 
-With Go as a guide, I want to make a lexically simple and beautify toy scripting
-language that has extreme minimal syntax. I also want the implementation to be
-as idiomatic as possible.
+With Go as a guide, I want to produce a toy scripting language that has extreme
+minimal syntax. I also want the Go implementation to be idiomatic.
 
-This project is not a race, it is experimental and a labor of love.
+This project is not a race, it is an experiment and a labor of love.
