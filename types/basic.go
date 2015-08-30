@@ -31,33 +31,6 @@ func (b Basic) Value() Typer {
 	return b
 }
 
-/*
-func (b Basic) Subtype(t Typer) bool {
-	switch t.(type) {
-	case Basic:
-
-	}
-	return false
-}
-
-public boolean isSubtype(Type type)
-  {
-    if (type instanceof BasicType)
-    {
-      BasicType temp = this;
-      while (temp != null && temp != type)
-      {
-        temp = temp.supe;
-      }
-      return temp == type;
-    }
-    else
-    {
-      return false;
-    }
-  }
-*/
-
 // String satisfies the fmt.Stringer interface.
 func (b Basic) String() string {
 	return b.name

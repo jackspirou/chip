@@ -6,6 +6,5 @@ import "github.com/jackspirou/chip/parser/token"
 type Typer interface {
 	Token() token.Type
 	Value() Typer
-	// Subtype(t Typer) bool
 	String() string
 }
