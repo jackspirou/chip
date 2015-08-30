@@ -15,8 +15,8 @@ A couple years later, I stumbled upon Golang and I was reminded of the same
 simplicity of SNARL. It was refreshing having dealt with so much Java, and C++.
 
 It is important to note that while Golang is lexically simple, as a compiled
-language it's it's runtime (GC, green threads), CSP, optimizations, and available
-target architectures implications are not trivial.
+language it's runtime (GC, green threads), CSP design, optimizations, and
+available target architectures implementations are not trivial.
 
 Excited by Golang's spirit of simplicity, the same lexically as SNARL, I was
 inspired to try writing a lexically simple toy scripting language. It seemed
