@@ -7,7 +7,7 @@ Motivation
 Long ago I wrote a compiler in college in Java. It was for a two series
 compilers course. The language was known as SNARL and the compiler output was
 MIPS assembly code. The MIPS asm then was manually ran on a virtual machine.
-While the SNARL compiler a simple toy for academic purposes, I noticed the
+While the SNARL compiler was a simple toy for academic purposes, I noticed the
 simplicity of it's design provided powerful foundations to explore.  
 
 A couple years later, I stumbled upon Golang and I was reminded of the same
