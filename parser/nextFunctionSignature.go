@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"github.com/jackspirou/chip/ssa"
 	"github.com/jackspirou/chip/parser/token"
+	"github.com/jackspirou/chip/ssa"
 	"github.com/jackspirou/chip/types"
 )
 
@@ -95,7 +95,7 @@ func (p *Parser) nextFunctionSignature() {
 
 	// create a func signature label and node
 	label := ssa.NewLabel(funcNameTok.String())
-	funcSigNode := ssa.NewLabelNode(funcSigType, label)
+	funcSigNode := ssa.NewFuncNode(funcSigType, label)
 
 	// check any previous type declarations via TBV
 	if ok, err := p.tbv.Verify(funcNameTok, funcSigNode); ok && err != nil {

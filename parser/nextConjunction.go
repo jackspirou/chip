@@ -3,8 +3,8 @@ package parser
 import (
 	"fmt"
 
-	"github.com/jackspirou/chip/ssa"
 	"github.com/jackspirou/chip/parser/token"
+	"github.com/jackspirou/chip/ssa"
 )
 
 // nextConjunction parses a conjunction.
