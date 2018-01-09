@@ -16,9 +16,9 @@ func main() {
 
 func TestReaderReadingText(t *testing.T) {
 	src := strings.NewReader(ReadingText)
-	rdr := New(src)
+	r := New(src)
 	for {
-		ch, err := rdr.Read()
+		ch, err := r.Next()
 		if err != nil {
 			t.Errorf("%s: %c", err, ch)
 		}
@@ -38,9 +38,9 @@ func main() {
 
 func TestReaderSkippingBOM(t *testing.T) {
 	src := strings.NewReader(SkippingBOMText)
-	rdr := New(src)
+	r := New(src)
 	for {
-		ch, err := rdr.Read()
+		ch, err := r.Next()
 		if err != nil {
 			t.Errorf("%s: %c", err, ch)
 		}
@@ -56,8 +56,8 @@ func TestReaderSkippingBOM(t *testing.T) {
 func TestReaderNoText(t *testing.T) {
 	var b []byte
 	src := bytes.NewReader(b)
-	rdr := New(src)
-	ch, err := rdr.Read()
+	r := New(src)
+	ch, err := r.Next()
 	if err != nil {
 		t.Errorf("%s: %c", err, ch)
 	}

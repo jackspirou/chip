@@ -4,19 +4,19 @@ import (
 	"log"
 	"strings"
 
-	"github.com/jackspirou/chip/parser/token"
-	"github.com/jackspirou/chip/types"
+	"github.com/jackspirou/chip/token"
+	"github.com/jackspirou/chip/typ"
 )
 
 // nextType parses a type token.
-func (p *Parser) nextType() types.Typer {
+func (p *Parser) nextType() typ.Type {
 	p.enter()
-	var t types.Typer
+	var t typ.Type
 	switch strings.ToUpper(p.tok.String()) {
 	case token.INT.String():
-		t = types.NewBasic(token.INT)
+		t = typ.NewBasic(token.INT)
 	case token.STRING.String():
-		t = types.NewBasic(token.STRING)
+		t = typ.NewBasic(token.STRING)
 	default:
 		log.Fatalf("unsupported type '%s'", p.tok)
 	}

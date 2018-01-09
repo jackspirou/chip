@@ -1,6 +1,6 @@
 package parser
 
-import "github.com/jackspirou/chip/parser/token"
+import "github.com/jackspirou/chip/token"
 
 // nextIf parses an if statement.
 func (p *Parser) nextIf() {

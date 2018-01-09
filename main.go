@@ -18,13 +18,13 @@ func main() {
 
 	defer file.Close()
 
-	p, err := parser.New(bufio.NewReader(file))
+	p, err := parser.New(bufio.NewReader(file), parser.Trace())
 	if err != nil {
 		panic(err)
 	}
 
-	p.Tracing = true
-
-	p.Parse()
+	if err = p.Execute(); err != nil {
+		panic(err)
+	}
 
 }

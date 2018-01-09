@@ -1,6 +1,6 @@
 package parser
 
-import "github.com/jackspirou/chip/parser/token"
+import "github.com/jackspirou/chip/token"
 
 // nextFunctionBody parses a function body.
 func (p *Parser) nextFunctionBody() {

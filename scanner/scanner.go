@@ -7,20 +7,20 @@ import (
 	"io"
 	"unicode"
 
-	"github.com/jackspirou/chip/parser/scanner/reader"
-	"github.com/jackspirou/chip/parser/token"
+	"github.com/jackspirou/chip/reader"
+	"github.com/jackspirou/chip/token"
 )
 
 // Scanner describes a scanner to scan tokens from a UTF-8 io.Reader source.
 type Scanner struct {
-	read *reader.Reader
+	r    *reader.Reader
 	char rune
 	pos  token.Pos
 }
 
 // New takes an io.Reader and returns a new chip Scanner.
 func New(src io.Reader) (*Scanner, error) {
-	s := &Scanner{read: reader.New(src), pos: token.NewPos(1, 0)}
+	s := &Scanner{r: reader.New(src), pos: token.Pos{Line: 1, Column: 0}}
 
 	// we must advance the scanner to first position
 	if err := s.next(); err != nil {
@@ -30,8 +30,8 @@ func New(src io.Reader) (*Scanner, error) {
 	return s, nil
 }
 
-// Scan returns the next token.Tokem in the source.
-func (s *Scanner) Scan() token.Token {
+// Next returns the next token.Token in the source.
+func (s *Scanner) Next() token.Token {
 
 	// skip any blank spaces
 	if err := s.skipSpaces(); err != nil {
@@ -102,10 +102,9 @@ func (s *Scanner) Scan() token.Token {
 }
 
 // next advances the scanners position and reads the next char.
-//
 // The only token the next method might return is a token.Error.
 func (s *Scanner) next() error {
-	char, err := s.read.Read()
+	char, err := s.r.Next()
 	if err != nil && char != reader.EOF {
 		return fmt.Errorf("bug: expected EOF got '%c', error: %s", char, err)
 	}
@@ -130,8 +129,12 @@ func (s *Scanner) skipSpaces() error {
 	return nil
 }
 
+//
 // scanner method helpers
 //
+
+// switch2 is a helper function to evaluate an assignment expression.
+// It takes two token.Types and returns a single token.Token.
 func (s *Scanner) switch2(tok0, tok1 token.Type) token.Token {
 	if s.char == '=' {
 		if err := s.next(); err != nil {
@@ -142,6 +145,7 @@ func (s *Scanner) switch2(tok0, tok1 token.Type) token.Token {
 	return token.New(tok0, tok0.String(), s.pos)
 }
 
+// switch3 is a helper function to evaluate an assignment expression.
 func (s *Scanner) switch3(tok0, tok1 token.Type, ch2 rune, tok2 token.Type) token.Token {
 	if s.char == '=' {
 		if err := s.next(); err != nil {
@@ -158,6 +162,7 @@ func (s *Scanner) switch3(tok0, tok1 token.Type, ch2 rune, tok2 token.Type) toke
 	return token.New(tok0, tok0.String(), s.pos)
 }
 
+// switch4 is a helper function to evaluate an assignment expression.
 func (s *Scanner) switch4(tok0, tok1 token.Type, ch2 rune, tok2, tok3 token.Type) token.Token {
 	if s.char == '=' {
 		if err := s.next(); err != nil {

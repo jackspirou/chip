@@ -18,10 +18,14 @@ import (
 	"github.com/jackspirou/chip/types"
 )
 
-// TBV stands for "Доверяй, но проверяй" or "Trust, but verify."
+// TBV is a record of certain node types so that parameters and return
+// value types can be syntactically trusted durring recursive decent parsing,
+// but also verified before execution.
 //
-// TBV records a table of nodes and types so that parameters and return types
-// can be trusted/executed durring recursive decent parsing, but also verified.
+// TBV stands for Trust But Verify
+//
+// en.wikipedia.org/wiki/Trust,_but_verify
+// "Доверяй, но проверяй"
 type TBV struct {
 	table map[string]ssa.Node
 }

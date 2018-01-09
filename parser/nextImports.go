@@ -1,6 +1,6 @@
 package parser
 
-import "github.com/jackspirou/chip/parser/token"
+import "github.com/jackspirou/chip/token"
 
 // nextImports parses all package imports.
 func (p *Parser) nextImports() {

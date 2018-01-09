@@ -42,10 +42,10 @@ func New(src io.Reader) *Reader {
 	return r
 }
 
-// Read returns the next Unicode character in the source and advances
+// Next returns the next Unicode character in the source and advances
 // the Reader position. It returns EOF if the reader's position is at the last
 // character of the source.
-func (r *Reader) Read() (rune, error) {
+func (r *Reader) Next() (rune, error) {
 
 	char, err := r.Peek()
 	if err != nil {
@@ -66,7 +66,9 @@ func (r *Reader) Read() (rune, error) {
 // character of the source.
 func (r *Reader) Peek() (rune, error) {
 
-	// if first char
+	// if this is the first time we are reading
+	// this file then we will will need to advance
+	// the Reader position
 	if r.char < 0 {
 
 		char, err := r.next()
@@ -74,20 +76,15 @@ func (r *Reader) Peek() (rune, error) {
 			return EOF, err
 		}
 
-		// set reader char
-		r.char = char
-
-		if r.char == BOM {
-
-			// ignore BOM
-			char, err := r.next()
+		if char == BOM { // ignore BOM
+			char, err = r.next()
 			if err != nil {
 				return EOF, err
 			}
-
-			// set reader char
-			r.char = char
 		}
+
+		// set reader char
+		r.char = char
 	}
 
 	return r.char, nil

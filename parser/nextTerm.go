@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"github.com/jackspirou/chip/parser/token"
 	"github.com/jackspirou/chip/ssa"
+	"github.com/jackspirou/chip/token"
 )
 
 // nextTerm parses a term.

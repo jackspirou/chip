@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/jackspirou/chip/types"
-
-	"github.com/jackspirou/chip/parser/token"
 	"github.com/jackspirou/chip/ssa"
+	"github.com/jackspirou/chip/token"
+	"github.com/jackspirou/chip/typ"
 )
 
 // nextUnit parses a unit.
@@ -47,7 +46,7 @@ func (p *Parser) nextUnit() ssa.Node {
 
 		p.next() // int constant
 
-		regNode = ssa.NewRegNode(types.Int, reg)
+		regNode = ssa.NewRegNode(typ.Int, reg)
 
 	case token.FLOAT:
 		// p.tok.String()
@@ -64,7 +63,7 @@ func (p *Parser) nextUnit() ssa.Node {
 
 		p.next() // string constant
 
-		regNode = ssa.NewRegNode(types.String, reg)
+		regNode = ssa.NewRegNode(typ.String, reg)
 
 	default:
 		log.Fatalf("term expected, got '%s'", p.tok)

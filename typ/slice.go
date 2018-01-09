@@ -1,9 +1,9 @@
-package types
+package typ
 
 import (
 	"fmt"
 
-	"github.com/jackspirou/chip/parser/token"
+	"github.com/jackspirou/chip/token"
 )
 
 // Slice describes an slice type.
@@ -23,7 +23,7 @@ func (s *Slice) Token() token.Type {
 }
 
 // Value returns the slice type value.
-func (s *Slice) Value() Typer {
+func (s *Slice) Value() Type {
 	return s.basic
 }
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/jackspirou/chip/parser/token"
+	"github.com/jackspirou/chip/token"
 )
 
 // nextStatement parse a statement.

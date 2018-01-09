@@ -1,9 +1,9 @@
 package parser
 
 import (
-	"github.com/jackspirou/chip/parser/token"
 	"github.com/jackspirou/chip/ssa"
-	"github.com/jackspirou/chip/types"
+	"github.com/jackspirou/chip/token"
+	"github.com/jackspirou/chip/typ"
 )
 
 // nextFunctionSignature parses a function signature.
@@ -20,7 +20,7 @@ func (p *Parser) nextFunctionSignature() {
 	p.nextExpected(token.LPAREN) // skip '('
 
 	// create a new func signature type
-	funcSigType := types.NewFunc()
+	funcSigType := typ.NewFunc()
 
 	// look for func parameters
 	if p.tok.Type != token.RPAREN {
@@ -96,11 +96,6 @@ func (p *Parser) nextFunctionSignature() {
 	// create a func signature label and node
 	label := ssa.NewLabel(funcNameTok.String())
 	funcSigNode := ssa.NewFuncNode(funcSigType, label)
-
-	// check any previous type declarations via TBV
-	if ok, err := p.tbv.Verify(funcNameTok, funcSigNode); ok && err != nil {
-		userErr(err, funcNameTok)
-	}
 
 	// set the func signature node to the global scope and check for user error
 	if err := p.scope.Global(funcNameTok, funcSigNode); err != nil {

@@ -3,20 +3,20 @@ package ssa
 import (
 	"fmt"
 
-	"github.com/jackspirou/chip/types"
+	"github.com/jackspirou/chip/typ"
 )
 
 // RegNode describes a register node.
 type RegNode struct {
-	typ types.Typer
+	typ typ.Type
 	reg *Register
 }
 
-func NewRegNode(typ types.Typer, reg *Register) *RegNode {
+func NewRegNode(typ typ.Type, reg *Register) *RegNode {
 	return &RegNode{typ, reg}
 }
 
-func (r *RegNode) Type() types.Typer {
+func (r *RegNode) Type() typ.Type {
 	return r.typ
 }
 

@@ -1,4 +1,4 @@
-package ssa
+package node
 
 import (
 	"fmt"

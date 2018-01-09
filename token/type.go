@@ -11,7 +11,6 @@ type Type int
 // character sequence (e.g., for the token ADD, the string is "+"). For all
 // other tokens the string corresponds to the token constant name (e.g. for the
 // token IDENT, the string is "IDENT").
-//
 func (t Type) String() string {
 	s := ""
 	if 0 <= t && t < Type(len(tokens)) {
@@ -29,7 +28,6 @@ func (t Type) String() string {
 // precedence 1 up to unary operators. The highest precedence serves as
 // "catch-all" precedence for selector, indexing, and other operator and
 // delimiter tokens.
-//
 const (
 	LowestPrec  = 0 // non-operators
 	UnaryPrec   = 6
@@ -54,7 +52,9 @@ func (t Type) Precedence() int {
 	return LowestPrec
 }
 
+//
 // Predicates
+//
 
 // Literal returns true for token types corresponding to identifiers and basic
 // type literals; it returns false otherwise.

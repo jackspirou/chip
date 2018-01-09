@@ -1,9 +1,13 @@
-package types
+package typ
 
-import "github.com/jackspirou/chip/parser/token"
+import "github.com/jackspirou/chip/token"
 
-var Int *Basic
-var String *Basic
+var (
+	// Int is a Basic Type
+	Int Basic
+	// String is a Basic Type
+	String Basic
+)
 
 func init() {
 	Int = NewBasic(token.INT)
@@ -17,8 +21,8 @@ type Basic struct {
 }
 
 // NewBasic returns a Basic object.
-func NewBasic(tok token.Type) *Basic {
-	return &Basic{tok, tok.String()}
+func NewBasic(tok token.Type) Basic {
+	return Basic{tok, tok.String()}
 }
 
 // Token returns the token.Type.
@@ -27,7 +31,7 @@ func (b Basic) Token() token.Type {
 }
 
 // Value returns the return values type.
-func (b Basic) Value() Typer {
+func (b Basic) Value() Type {
 	return b
 }
 

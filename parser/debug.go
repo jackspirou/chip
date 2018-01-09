@@ -10,7 +10,7 @@ import (
 // enter writes a message to the terminal displaying the currently executing
 // parent function, if tracing is set to true.
 func (p *Parser) enter() {
-	if p.Tracing {
+	if p.opts.trace {
 		WriteBlanks(p.level)
 		fmt.Println("enter " + debug())
 		p.level += 4
@@ -19,7 +19,7 @@ func (p *Parser) enter() {
 
 // exit is like enter, but the message says the parent function is exiting.
 func (p *Parser) exit() {
-	if p.Tracing {
+	if p.opts.trace {
 		p.level -= 4
 		WriteBlanks(p.level)
 		fmt.Println("exit  " + debug())
