@@ -13,8 +13,8 @@ type Scope struct {
 	stack *stack
 }
 
-// NewScope creates a new Scope object.
-func NewScope() *Scope {
+// New creates a new Scope object.
+func New() *Scope {
 	return &Scope{newStack()}
 }
 
@@ -25,13 +25,13 @@ func (s Scope) Empty() bool {
 
 // Open pushes a new SymTab (symbolTable) on the Scope stack.
 func (s *Scope) Open() {
-	s.stack.push(newSymTab())
+	s.stack.push(newSymbolTable())
 }
 
 // Close pops a SymTab (symbolTable) off the Scope stack.
-func (s *Scope) Close() (SymTab, error) {
+func (s *Scope) Close() (SymbolTable, error) {
 	if s.Empty() {
-		return SymTab{}, errors.New("can't pop an empty scope stack")
+		return SymbolTable{}, errors.New("can't pop an empty scope stack")
 	}
 	return s.stack.pop()
 }

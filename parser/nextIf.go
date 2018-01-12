@@ -5,7 +5,8 @@ import "github.com/jackspirou/chip/token"
 // nextIf parses an if statement.
 func (p *Parser) nextIf() {
 	p.enter()
-	for true {
+	for {
+		// the nextIf loop expects an 'if' token
 		p.nextExpected(token.IF)
 		p.nextExpression()
 		p.nextExpected(token.LBRACE)

@@ -5,9 +5,9 @@ import (
 	"fmt"
 )
 
-// stack describes a symTab (symboltable) stack.
+// stack describes a symboltable (symboltable) stack.
 type stack struct {
-	list []SymTab
+	list []SymbolTable
 }
 
 // newStack returns a new stack.
@@ -16,21 +16,21 @@ func newStack() *stack {
 }
 
 // push pushes a new symTab (symboltable) on the stack.
-func (s *stack) push(st SymTab) {
+func (s *stack) push(st SymbolTable) {
 	s.list = append(s.list, st)
 }
 
 // pop pops a symTab (symboltable) off the stack.
-func (s *stack) pop() (SymTab, error) {
+func (s *stack) pop() (SymbolTable, error) {
 	if s.empty() {
-		return SymTab{}, errors.New("cannot pop an empty stack")
+		return SymbolTable{}, errors.New("cannot pop an empty stack")
 	}
 	top := s.list[len(s.list)-1]
 	s.list = s.list[0 : len(s.list)-1]
 	return top, nil
 }
 
-func (s stack) bottom() (*SymTab, error) {
+func (s stack) bottom() (*SymbolTable, error) {
 	if s.empty() {
 		return nil, errors.New("cannot get the bottom of an empty stack")
 	}
@@ -38,9 +38,9 @@ func (s stack) bottom() (*SymTab, error) {
 	return &bottom, nil
 }
 
-func (s stack) peek() (SymTab, error) {
+func (s stack) peek() (SymbolTable, error) {
 	if s.empty() {
-		return SymTab{}, errors.New("cannot peek on an empty stack")
+		return SymbolTable{}, errors.New("cannot peek on an empty stack")
 	}
 	return s.list[len(s.list)-1], nil
 }

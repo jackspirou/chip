@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/jackspirou/chip/ssa"
@@ -12,24 +11,19 @@ import (
 // nextUnit parses a unit.
 func (p *Parser) nextUnit() ssa.Node {
 	p.enter()
+	p.exit()
 
-	var regNode ssa.Node
-	var reg *ssa.Register
+	node := ssa.NewNode(p.tok.Type)
 
 	switch p.tok.Type {
 	case token.IDENT:
-		nameTok := p.tok
-		fmt.Println(nameTok)
 		p.next()
 		if p.tok.Type == token.LPAREN {
 			p.next() // '('
 			if p.tok.Type != token.RPAREN {
-				paramNode := p.nextExpression()
-				fmt.Println(paramNode)
+				p.nextExpression()
 				for p.tok.Type == token.COMMA {
 					p.next() // ','
-					paramTok := p.tok
-					fmt.Println(paramTok)
 					p.nextExpression()
 				}
 			}
@@ -40,9 +34,6 @@ func (p *Parser) nextUnit() ssa.Node {
 			p.nextExpected(token.RBRACK)
 		}
 	case token.INT:
-
-		reg = p.alloc.Request()
-		// assembler.emit("li", reg, p.tok.String());
 
 		p.next() // int constant
 
@@ -69,7 +60,6 @@ func (p *Parser) nextUnit() ssa.Node {
 		log.Fatalf("term expected, got '%s'", p.tok)
 	}
 
-	p.exit()
 	return regNode
 }
 

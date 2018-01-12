@@ -1,8 +1,6 @@
 package parser
 
 import (
-	"fmt"
-
 	"github.com/jackspirou/chip/ssa"
 
 	"github.com/jackspirou/chip/token"
@@ -12,7 +10,7 @@ import (
 func (p *Parser) nextSum() ssa.Node {
 	p.enter()
 
-	leftRegNode := p.nextProduct()
+	p.nextProduct()
 
 	for p.tok.Type == token.ADD || p.tok.Type == token.SUB {
 
@@ -21,8 +19,7 @@ func (p *Parser) nextSum() ssa.Node {
 		tok := p.tok
 		p.next() // skip '+' or '-'
 
-		rightRegNode := p.nextProduct()
-		fmt.Println(rightRegNode)
+		p.nextProduct()
 
 		// check(right, intType);
 
@@ -35,5 +32,5 @@ func (p *Parser) nextSum() ssa.Node {
 	}
 
 	p.exit()
-	return leftRegNode
+	return nil
 }

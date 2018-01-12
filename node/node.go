@@ -7,3 +7,8 @@ type Node interface {
 	Type() typ.Type
 	String() string
 }
+
+type node struct {
+	typ typ.Type
+	val interface{}
+}

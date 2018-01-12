@@ -3,27 +3,27 @@ package scope
 import (
 	"fmt"
 
-	"github.com/jackspirou/chip/ssa"
+	"github.com/jackspirou/chip/node"
 )
 
-// SymTab describes a symboltable that stores describtor nodes.
-type SymTab struct {
-	table map[string]ssa.Node
+// SymbolTable describes a symboltable that stores describtor nodes.
+type SymbolTable struct {
+	table map[string]node.Node
 }
 
-// newSymTab returns a new symTab object.
-func newSymTab() SymTab {
-	return SymTab{make(map[string]ssa.Node)}
+// newSymbolTable returns a new symTab object.
+func newSymbolTable() SymbolTable {
+	return SymbolTable{make(map[string]node.Node)}
 }
 
 // contains checks if the symboltable contains a specific node name.
-func (s SymTab) contains(name string) bool {
+func (s SymbolTable) contains(name string) bool {
 	_, ok := s.table[name]
 	return ok
 }
 
 // set sets a node and its name in the symboltable.
-func (s *SymTab) set(name string, node ssa.Node) error {
+func (s *SymbolTable) set(name string, node node.Node) error {
 	if s.contains(name) {
 		return fmt.Errorf("'%s' already declared", name)
 	}
@@ -32,7 +32,7 @@ func (s *SymTab) set(name string, node ssa.Node) error {
 }
 
 // get gets a node by its name.
-func (s SymTab) get(name string) (ssa.Node, error) {
+func (s SymbolTable) get(name string) (node.Node, error) {
 	if node, ok := s.table[name]; ok {
 		return node, nil
 	}

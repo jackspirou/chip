@@ -37,7 +37,7 @@ func New(src io.Reader, opts ...Option) (*Parser, error) {
 		scan:  scan,
 		tok:   token.NewEOF(),
 		alloc: ssa.NewAlloc(),
-		scope: scope.NewScope(),
+		scope: scope.New(),
 	}
 
 	// set options
