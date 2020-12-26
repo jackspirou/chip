@@ -1,19 +1,19 @@
-package node
+package object
 
 import (
 	"fmt"
 
-	"github.com/jackspirou/chip/typ"
+	"github.com/jackspirou/chip/types"
 )
 
 // FuncNode describes a node label for SSA intermediate representation.
 type FuncNode struct {
-	typ   typ.Type
+	typ   types.Type
 	label *Label
 }
 
 // NewFuncNode creates a new label for a node.
-func NewFuncNode(typ typ.Type, label *Label) *FuncNode {
+func NewFuncNode(typ types.Type, label *Label) *FuncNode {
 	return &FuncNode{typ, label}
 }
 
@@ -33,7 +33,7 @@ func (l FuncNode) Label() *Label {
 }
 
 // Type returns the FuncNode Label.
-func (l *FuncNode) Type() typ.Type {
+func (l *FuncNode) Type() types.Type {
 	return l.typ
 }
 

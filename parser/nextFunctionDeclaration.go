@@ -2,7 +2,7 @@ package parser
 
 // nextFunctionDeclaration parses a function declaration.
 func (p *Parser) nextFunctionDeclaration() {
-	p.enter()
+	p.enterNext()
 
 	// open a new scope for this function declaration
 	//
@@ -16,5 +16,5 @@ func (p *Parser) nextFunctionDeclaration() {
 	// close the scope to regain global scope access
 	p.scope.Close()
 
-	p.exit()
+	p.exitNext()
 }

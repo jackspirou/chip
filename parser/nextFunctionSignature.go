@@ -1,32 +1,31 @@
 package parser
 
 import (
-	"github.com/jackspirou/chip/ssa"
 	"github.com/jackspirou/chip/token"
-	"github.com/jackspirou/chip/typ"
+	"github.com/jackspirou/chip/types"
 )
 
 // nextFunctionSignature parses a function signature.
 func (p *Parser) nextFunctionSignature() {
-	p.enter()
+	p.enterNext()
 
 	// skip 'func'
 	p.nextExpected(token.FUNC)
 
 	// save the func name token
-	funcNameTok := p.tok
+	//funcNameTok := p.tok
 
 	p.nextExpected(token.IDENT)  // skip func name
 	p.nextExpected(token.LPAREN) // skip '('
 
 	// create a new func signature type
-	funcSigType := typ.NewFunc()
+	funcSigType := types.NewFunc()
 
 	// look for func parameters
 	if p.tok.Type != token.RPAREN {
 
 		// save the parameter name token
-		paramNameTok := p.tok
+		// paramNameTok := p.tok
 
 		// skip param name
 		p.nextExpected(token.IDENT)
@@ -38,18 +37,18 @@ func (p *Parser) nextFunctionSignature() {
 		funcSigType.AddParam(paramType)
 
 		// allocate a register and create a new register node
-		reg := p.alloc.Request()
-		regNode := ssa.NewRegNode(paramType, reg)
+		// reg := p.alloc.Request()
+		// regNode := ssa.NewRegNode(paramType, reg)
 
 		// add the parameter name token and register node to the current scope
-		p.scope.Add(paramNameTok, regNode)
+		// p.scope.Add(paramNameTok, regNode)
 
 		// look for more parameters
 		for p.tok.Type == token.COMMA {
 			p.next() // skip ','
 
 			// save the parameter name token
-			paramNameTok = p.tok
+			// paramNameTok = p.tok
 
 			// skip parameter name
 			p.nextExpected(token.IDENT)
@@ -61,11 +60,11 @@ func (p *Parser) nextFunctionSignature() {
 			funcSigType.AddParam(paramType)
 
 			// allocate a register and create a new register node
-			reg = p.alloc.Request()
-			regNode = ssa.NewRegNode(paramType, reg)
+			// reg = p.alloc.Request()
+			// regNode = ssa.NewRegNode(paramType, reg)
 
 			// add the parameter name token and register node to the current scope
-			p.scope.Add(paramNameTok, regNode)
+			// p.scope.Add(paramNameTok, regNode)
 		}
 	}
 
@@ -94,13 +93,13 @@ func (p *Parser) nextFunctionSignature() {
 	}
 
 	// create a func signature label and node
-	label := ssa.NewLabel(funcNameTok.String())
-	funcSigNode := ssa.NewFuncNode(funcSigType, label)
+	// label := ssa.NewLabel(funcNameTok.String())
+	// funcSigNode := ssa.NewFuncNode(funcSigType, label)
 
 	// set the func signature node to the global scope and check for user error
-	if err := p.scope.Global(funcNameTok, funcSigNode); err != nil {
-		userErr(err, funcNameTok)
-	}
+	// if err := p.scope.Global(funcNameTok, funcSigNode); err != nil {
+	// userErr(err, funcNameTok)
+	// }
 
-	p.exit()
+	p.exitNext()
 }

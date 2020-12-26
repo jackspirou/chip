@@ -4,7 +4,8 @@ import "github.com/jackspirou/chip/token"
 
 // nextConstant parses a constant.
 func (p *Parser) nextConstant() {
-	p.enter()
+	p.enterNext()
+
 	p.nextExpected(token.CONST)
 	if p.tok.Type == token.LPAREN {
 		p.next() // skip '('
@@ -35,5 +36,6 @@ func (p *Parser) nextConstant() {
 		p.nextExpected(token.IDENT)
 		p.nextDeclaration()
 	}
-	p.exit()
+
+	p.exitNext()
 }

@@ -1,33 +1,75 @@
 package parser
 
 import (
-	"github.com/jackspirou/chip/ssa"
+	"github.com/jackspirou/chip/ast"
 	"github.com/jackspirou/chip/token"
 )
 
 // nextComparison parses a comparison.
-func (p *Parser) nextComparison() ssa.Node {
-	p.enter()
+func (p *Parser) nextComparison() (comparison ast.Node, err error) {
+	p.enterNext()
 
+	// no comparison, usually the forever loop case
 	if p.tok.Type == token.LBRACE {
-		return nil
+		booltok := token.New(token.IDENT, "", token.Pos{
+			Line:   p.tok.Line(),
+			Column: p.tok.Column() - 1,
+		})
+		return ast.NewNode(ast.COMPARISON, booltok, ast.Boolean(true)), nil
 	}
 
-	p.nextSum()
+	left, err := p.nextSum()
+	if err != nil {
+		return nil, err
+	}
 
 	if p.tok.Type.Comparison() {
-		switch p.tok.Type {
-		case token.EQL: // left == right
-		case token.LSS: // left < right
-		case token.GTR: // left > right
-		case token.NEQ: // left != right
-		case token.LEQ: // left <= right
-		case token.GEQ: // left >= right
+
+		comparitor := ast.NewNode(ast.COMPARISON, p.tok, ast.String(p.tok.String()))
+
+		tbool := ast.NewNode(ast.COMPARISON, p.tok, ast.Boolean(true))
+		fbool := ast.NewNode(ast.COMPARISON, p.tok, ast.Boolean(false))
+		p.next() // skip comparison token
+
+		right, err := p.nextSum()
+		if err != nil {
+			return nil, err
 		}
-		p.next() // comparison
-		p.nextSum()
+
+		switch comparitor.Token().Type {
+		case token.EQL: // left == right
+			if left.IntegerValue() == right.IntegerValue() {
+				comparison = tbool
+			}
+			comparison = fbool
+		case token.LSS: // left < right
+			if left.IntegerValue() < right.IntegerValue() {
+				comparison = tbool
+			}
+			comparison = fbool
+		case token.GTR: // left > right
+			if left.IntegerValue() > right.IntegerValue() {
+				comparison = tbool
+			}
+			comparison = fbool
+		case token.NEQ: // left != right
+			if left.IntegerValue() != right.IntegerValue() {
+				comparison = tbool
+			}
+			comparison = fbool
+		case token.LEQ: // left <= right
+			if left.IntegerValue() <= right.IntegerValue() {
+				comparison = tbool
+			}
+			comparison = fbool
+		case token.GEQ: // left >= right
+			if left.IntegerValue() >= right.IntegerValue() {
+				comparison = tbool
+			}
+			comparison = fbool
+		}
 	}
 
-	p.exit()
-	return nil
+	p.exitNext()
+	return comparison, nil
 }

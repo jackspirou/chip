@@ -6,12 +6,14 @@ import (
 
 // nextFor parses a for loop.
 func (p *Parser) nextFor() error {
-	p.enter()
+	p.enterNext()
+
 	p.next() // Skip 'for' token
 	p.nextExpression()
 	p.nextExpected(token.LBRACE)
 	p.nextStatement()
 	p.nextExpected(token.RBRACE)
-	p.exit()
+
+	p.exitNext()
 	return nil
 }

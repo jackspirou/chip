@@ -1,27 +1,20 @@
-package typ
-
-import "github.com/jackspirou/chip/token"
+package types
 
 // Param describes a parameter type.
 type Param struct {
-	typ  Type
+	t    Type
 	name string
 	next *Param
 }
 
 // newParam returns a new parameter of the provided type.
-func newParam(typ Type) *Param {
-	return &Param{typ: typ, name: typ.String()}
+func newParam(t Type) *Param {
+	return &Param{t: t, name: t.String()}
 }
 
 // Value returns the parameter's token type.
 func (p Param) Value() Type {
-	return p.typ
-}
-
-// Token returns the token.Type.
-func (p Param) Token() token.Type {
-	return p.typ.Token()
+	return p.t
 }
 
 // String impliments the fmt.Stringer interface and returns the name of the

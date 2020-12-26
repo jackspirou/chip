@@ -17,3 +17,11 @@ func Trace() Option {
 		return nil
 	}
 }
+
+// AST sets the ast option.
+func AST() Option {
+	return func(o *options) error {
+		o.trace = true
+		return nil
+	}
+}

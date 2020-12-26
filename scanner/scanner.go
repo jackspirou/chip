@@ -16,11 +16,17 @@ type Scanner struct {
 	r    *reader.Reader
 	char rune
 	pos  token.Pos
+	opts options
 }
 
 // New takes an io.Reader and returns a new chip Scanner.
-func New(src io.Reader) (*Scanner, error) {
+func New(src io.Reader, opts ...Option) (*Scanner, error) {
 	s := &Scanner{r: reader.New(src), pos: token.Pos{Line: 1, Column: 0}}
+
+	// set options
+	for _, opt := range opts {
+		opt(&s.opts) // for now we don't check option errs
+	}
 
 	// we must advance the scanner to first position
 	if err := s.next(); err != nil {

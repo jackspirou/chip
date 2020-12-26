@@ -1,20 +1,20 @@
 package parser
 
 import (
-	"github.com/jackspirou/chip/ssa"
+	"github.com/jackspirou/chip/ast"
 	"github.com/jackspirou/chip/token"
 )
 
 // nextExpression parses an expression.
-func (p *Parser) nextExpression() ssa.Node {
-	p.enter()
+func (p *Parser) nextExpression() (expression ast.Node, err error) {
+	p.enterNext()
 
-	p.nextConjunction()
+	expression, err = p.nextConjunction()
 	for p.tok.Type == token.LOR {
 		p.next() // skip '||'
-		p.nextConjunction()
+		expression, err = p.nextConjunction()
 	}
 
-	p.exit()
-	return nil
+	p.exitNext()
+	return expression, nil
 }

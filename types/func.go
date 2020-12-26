@@ -1,4 +1,4 @@
-package typ
+package types
 
 import "github.com/jackspirou/chip/token"
 
@@ -17,9 +17,9 @@ func NewFunc() *Func {
 }
 
 // AddParam adds a new parameter type to the end of the parameter list.
-func (f *Func) AddParam(typ Type) {
+func (f *Func) AddParam(t Type) {
 	f.arity++
-	f.last.next = newParam(typ)
+	f.last.next = newParam(t)
 	f.last = f.last.next
 }
 

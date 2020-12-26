@@ -1,10 +1,12 @@
 package parser
 
-import "github.com/jackspirou/chip/token"
+import (
+	"github.com/jackspirou/chip/token"
+)
 
 // nextFunctionBody parses a function body.
 func (p *Parser) nextFunctionBody() {
-	p.enter()
+	p.enterNext()
 
 	p.nextExpected(token.LBRACE)
 	p.nextStatement()
@@ -13,5 +15,5 @@ func (p *Parser) nextFunctionBody() {
 	}
 	p.nextExpected(token.RBRACE)
 
-	p.exit()
+	p.exitNext()
 }

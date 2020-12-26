@@ -1,10 +1,12 @@
-package node
+package object
 
 import (
 	"log"
 	"strconv"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/jackspirou/chip/types"
 )
 
 var count = 0 // the number of labels created
@@ -80,4 +82,14 @@ func (l *Label) Place() {
 // String impliments the fmt.Stringer interface.
 func (l Label) String() string {
 	return l.name
+}
+
+// This is uselsess, its just here to satisfy the node interface
+func (n *Label) SetString(v string) error {
+	return nil
+}
+
+// Type returns the FuncNode Label.
+func (l *Label) Type() types.Type {
+	return nil
 }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-// stack describes a symboltable (symboltable) stack.
+// stack describes a SymbolTable stack.
 type stack struct {
 	list []SymbolTable
 }
@@ -15,12 +15,12 @@ func newStack() *stack {
 	return &stack{}
 }
 
-// push pushes a new symTab (symboltable) on the stack.
+// push pushes a new SymbolTable on the stack.
 func (s *stack) push(st SymbolTable) {
 	s.list = append(s.list, st)
 }
 
-// pop pops a symTab (symboltable) off the stack.
+// pop pops a SymbolTable off the stack.
 func (s *stack) pop() (SymbolTable, error) {
 	if s.empty() {
 		return SymbolTable{}, errors.New("cannot pop an empty stack")
@@ -50,7 +50,7 @@ func (s stack) empty() bool {
 	return len(s.list) < 1
 }
 
-// size returns the number of symTabs (symboltables) in the stack.
+// size returns the number of SymbolTables in the stack.
 func (s stack) size() int {
 	return len(s.list)
 }

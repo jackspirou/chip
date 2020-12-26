@@ -4,7 +4,8 @@ import "github.com/jackspirou/chip/token"
 
 // nextIf parses an if statement.
 func (p *Parser) nextIf() {
-	p.enter()
+	p.enterNext()
+
 	for {
 		// the nextIf loop expects an 'if' token
 		p.nextExpected(token.IF)
@@ -29,5 +30,6 @@ func (p *Parser) nextIf() {
 			break
 		}
 	}
-	p.exit()
+
+	p.exitNext()
 }

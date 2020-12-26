@@ -1,11 +1,18 @@
 package parser
 
-import "github.com/jackspirou/chip/token"
+import (
+	"github.com/jackspirou/chip/token"
+)
 
 // nextReturn parses a return.
 func (p *Parser) nextReturn() {
-	p.enter()
+	p.enterNext()
+
 	p.nextExpected(token.RETURN)
-	p.nextExpression()
-	p.exit()
+	if p.tok.Type != token.RBRACE {
+		p.nextExpression()
+	}
+
+	// exiting the parser's debug scope
+	p.exitNext()
 }

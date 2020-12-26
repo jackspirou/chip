@@ -2,7 +2,7 @@ package parser
 
 // nextFunction parses a function.
 func (p *Parser) nextFunction() {
-	p.enter()
+	p.enterNext()
 
 	tok := p.tok
 	_, err := p.scope.Lookup(tok)
@@ -10,7 +10,7 @@ func (p *Parser) nextFunction() {
 		userErr(err, tok)
 	}
 
-	p.exit()
+	p.exitNext()
 }
 
 /*

@@ -4,8 +4,10 @@ import "github.com/jackspirou/chip/token"
 
 // nextAssignment parses the next assignment statement.
 func (p *Parser) nextAssignment() {
-	p.enter()
+	p.enterNext()
+
 	p.nextExpected(token.ASSIGN)
 	p.nextExpression()
-	p.exit()
+
+	p.exitNext()
 }

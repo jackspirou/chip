@@ -1,0 +1,10 @@
+package main
+
+func main() {
+    three := 1+10
+    return
+}
+
+func add(x int, y int) int {
+    return x + y
+}

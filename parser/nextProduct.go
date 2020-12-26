@@ -1,27 +1,47 @@
 package parser
 
 import (
-	"github.com/jackspirou/chip/ssa"
+	"fmt"
+	"math"
 
+	"github.com/jackspirou/chip/ast"
 	"github.com/jackspirou/chip/token"
 )
 
 // nextProduct parses a product.
-func (p *Parser) nextProduct() ssa.Node {
-	p.enter()
+func (p *Parser) nextProduct() (product ast.Node, err error) {
+	p.enterNext()
 
-	p.nextTerm()
+	left, err := p.nextTerm()
+	if err != nil {
+		return nil, err
+	}
+	product = left
+
 	for p.tok.Type == token.MUL || p.tok.Type == token.QUO || p.tok.Type == token.REM {
 
-		tok := p.tok
-		p.next() // skip '*' or '/'
-		p.nextTerm()
+		// '*' or '/'
+		operator := ast.NewNode(ast.OPERATOR, p.tok, ast.String(p.tok.String()))
 
-		if tok.Type == token.MUL {
-		} else {
+		p.next() // skip '*' or '/'
+		right, err := p.nextTerm()
+		if err != nil {
+			return nil, err
 		}
+
+		switch operator.Token().Type {
+		case token.MUL:
+			fmt.Println(left.IntegerValue() * right.IntegerValue())
+		case token.QUO:
+			fmt.Println(left.IntegerValue() / right.IntegerValue())
+		case token.REM:
+			fmt.Println(right.IntegerValue())
+			fmt.Println(math.Mod(float64(left.IntegerValue()), float64(right.IntegerValue())))
+		}
+
+		product = right
 	}
 
-	p.exit()
-	return nil
+	p.exitNext()
+	return product, err
 }

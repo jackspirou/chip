@@ -4,7 +4,7 @@ import "github.com/jackspirou/chip/token"
 
 // nextImports parses all package imports.
 func (p *Parser) nextImports() {
-	p.enter()
+	p.enterNext()
 
 	if p.tok.Type == token.IMPORT {
 		p.next()
@@ -39,5 +39,6 @@ func (p *Parser) nextImports() {
 		}
 
 	}
-	p.exit()
+
+	p.exitNext()
 }

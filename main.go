@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 
 	"github.com/jackspirou/chip/parser"
@@ -9,7 +10,7 @@ import (
 
 func main() {
 
-	path := "test/gcd.chp"
+	path := "test/simple_add.chp"
 
 	file, err := os.Open(path)
 	if err != nil {
@@ -23,8 +24,10 @@ func main() {
 		panic(err)
 	}
 
-	if err = p.Execute(); err != nil {
+	if err = p.Parse(); err != nil {
+		fmt.Println("we are freaking out here!")
 		panic(err)
 	}
 
+	return
 }

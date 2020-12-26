@@ -1,22 +1,22 @@
 package parser
 
 import (
+	"fmt"
 	"log"
+	"strconv"
 
-	"github.com/jackspirou/chip/ssa"
+	"github.com/jackspirou/chip/ast"
 	"github.com/jackspirou/chip/token"
-	"github.com/jackspirou/chip/typ"
 )
 
 // nextUnit parses a unit.
-func (p *Parser) nextUnit() ssa.Node {
-	p.enter()
-	p.exit()
-
-	node := ssa.NewNode(p.tok.Type)
+func (p *Parser) nextUnit() (unit ast.Node, err error) {
+	p.enterNext()
 
 	switch p.tok.Type {
 	case token.IDENT:
+		// des = node.NewLabel(p.tok.String())
+		unit = ast.NewNode(ast.IDENT, p.tok, ast.String(p.tok.String()))
 		p.next()
 		if p.tok.Type == token.LPAREN {
 			p.next() // '('
@@ -34,33 +34,50 @@ func (p *Parser) nextUnit() ssa.Node {
 			p.nextExpected(token.RBRACK)
 		}
 	case token.INT:
+		// convert token from string to integer
+		i, err := strconv.Atoi(p.tok.String())
+		if err != nil {
+			return nil, err
+		}
 
-		p.next() // int constant
+		// make a new integer node
+		unit = ast.NewNode(ast.INTEGER, p.tok, ast.Integer(i))
 
-		regNode = ssa.NewRegNode(typ.Int, reg)
-
+		p.next()
 	case token.FLOAT:
-		// p.tok.String()
+		f, err := strconv.ParseFloat(p.tok.String(), 64)
+		if err != nil {
+			return nil, err
+		}
+
+		// make a new integer node
+		unit = ast.NewNode(ast.FLOAT, p.tok, ast.Float(f))
+
 		p.next()
 	case token.CHAR:
 		// p.tok.String()
 		p.next()
 	case token.STRING:
 
-		reg = p.alloc.Request()
+		unit = ast.NewNode(ast.STRING, p.tok, ast.String(p.tok.String()))
+
+		// reg = p.alloc.Request()
 
 		// Label label = global.enterString(scanner.getString());
 		// assembler.emit("la", reg, label);
 
 		p.next() // string constant
 
-		regNode = ssa.NewRegNode(typ.String, reg)
+		// regNode = node.NewRegNode(types.String, reg)
 
 	default:
 		log.Fatalf("term expected, got '%s'", p.tok)
 	}
 
-	return regNode
+	fmt.Println("UNIT: ", unit, err)
+
+	p.exitNext()
+	return unit, err
 }
 
 /*

@@ -3,12 +3,14 @@ package parser
 import (
 	"log"
 
+	"github.com/jackspirou/chip/ast"
 	"github.com/jackspirou/chip/token"
 )
 
 // nextStatement parse a statement.
-func (p *Parser) nextStatement() {
-	p.enter()
+func (p *Parser) nextStatement() (statement ast.Node, err error) {
+	p.enterNext()
+
 	switch p.tok.Type {
 	case token.IDENT:
 		p.next()
@@ -51,10 +53,10 @@ func (p *Parser) nextStatement() {
 		case token.SWITCH:
 			p.nextSwitch()
 	*/
-	case token.CONST:
-		p.nextConstant()
 	default:
 		log.Fatalf("statement expected, got '%s'", p.tok)
 	}
-	p.exit()
+
+	p.exitNext()
+	return statement, err
 }

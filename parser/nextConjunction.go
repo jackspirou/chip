@@ -1,21 +1,21 @@
 package parser
 
 import (
-	"github.com/jackspirou/chip/ssa"
+	"github.com/jackspirou/chip/ast"
 	"github.com/jackspirou/chip/token"
 )
 
 // nextConjunction parses a conjunction.
-func (p *Parser) nextConjunction() ssa.Node {
-	p.enter()
+func (p *Parser) nextConjunction() (conjunction ast.Node, err error) {
+	p.enterNext()
 
-	p.nextComparison()
+	conjunction, err = p.nextComparison()
 
 	for p.tok.Type == token.LAND {
 		p.next() // skip '&&'
-		p.nextComparison()
+		conjunction, err = p.nextComparison()
 	}
 
-	p.exit()
-	return nil
+	p.exitNext()
+	return conjunction, nil
 }
