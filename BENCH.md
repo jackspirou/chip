@@ -155,3 +155,34 @@ and 2-elem `[]Value`); a 1-element slice is unchanged because 56 B still rounds
 up to the 64 B class. The `sec/op` gains come from copying a smaller `Value`.
 (`string_build` first read +42.9% in a `-count=10` sample but −14.8% at
 `-count=20` — a load spike; its string path never touches the merged word.)
+
+### 4. `callPrint`: format into a reused buffer, no per-call holder slice
+
+`callPrint` built a fresh `[]string` of every argument's `String()`, joined it
+with `strings.Join`, and handed that to `fmt.Fprintln` — for the common
+single-argument `print(x)` that is two heap allocations per call (the holder
+slice and the joined/boxed string) on top of the one `String()` itself makes.
+The rewrite formats directly into a byte buffer reused across calls
+(`engine.printBuf`) and writes it once. The single-argument case — by far the
+most common — takes a fast path that allocates no holder at all; multiple
+arguments keep a per-call `[]string` (the same 16 B/elem the original used) but
+still skip `Join`/`Fprintln` in favor of the reused buffer. Every argument is
+evaluated before the buffer is touched, so a nested `print` (an argument that
+calls a function that prints) can't corrupt it and a mid-evaluation error still
+writes nothing — output and error behavior are byte-for-byte unchanged.
+
+This adds the `print_loop` program (20,000 single-argument prints to the sink),
+which the baseline suite did not isolate. vs optimization 3, back-to-back A/B
+(HEAD `callPrint` stashed/restored on the same machine, `-count=20`, benchstat):
+
+| Benchmark | sec/op | B/op | allocs/op |
+|---|--:|--:|--:|
+| `StreamRun/print_loop` | −25.6% | −75.5% (414.0Ki → 101.3Ki) | −49.8% (40.17k → 20.18k) |
+
+`B/op` and `allocs/op` are deterministic (±0%, `p=0.000 n=20`). Allocations halve
+— from two per print to one — because the holder slice and the joined string are
+both gone; the single survivor is the value's own `String()` (e.g. `FormatInt`),
+which is inherent. The reused `printBuf` grows once per run and is amortized away.
+The only programs that call `print` more than once at top level are `print_loop`
+and the example files; the rest print a single result, so this change is a wash
+for them and a large win wherever printing is on the hot path.

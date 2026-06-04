@@ -142,6 +142,7 @@ type engine struct {
 	ranStmt    bool            // whether any top-level statement ran (gates main-at-EOF)
 	depth      int             // current call depth (recursion guard)
 	streamDone bool            // the current stream reached EOF (no more read-ahead)
+	printBuf   []byte          // reused scratch for building a print line (callPrint)
 }
 
 func newEngine(out io.Writer, loader Loader) *engine {

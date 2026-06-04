@@ -153,6 +153,21 @@ print(build())
 `,
 	},
 	{
+		// print in a tight loop: 20,000 lines to the sink. Isolates callPrint's
+		// per-call cost (formatting + the write), which is otherwise a
+		// once-per-program event the other benchmarks barely touch.
+		name: "print_loop",
+		src: `func run() {
+	i := 0
+	for i < 20000 {
+		print(i)
+		i = i + 1
+	}
+}
+run()
+`,
+	},
+	{
 		// Mutual recursion through a forward reference (even calls odd, defined
 		// later). even(20) is depth-safe; calling it 5,000 times is 100,000
 		// calls without tripping the recursion guard.

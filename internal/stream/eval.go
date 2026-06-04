@@ -1,9 +1,6 @@
 package stream
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/jackspirou/chip/internal/ast"
 	"github.com/jackspirou/chip/internal/token"
 	"github.com/jackspirou/chip/internal/value"
@@ -294,8 +291,30 @@ func (e *engine) callIn(home *pkg, fn *ast.FuncDecl, args []value.Value, pos tok
 }
 
 // callPrint evaluates each argument and writes them space-separated, newline
-// terminated, to the engine's output.
+// terminated, to the engine's output. Every argument is evaluated before the
+// reused buffer is touched, so a mid-evaluation error leaves nothing written
+// (matching the previous build-then-Fprintln) and a nested print (an argument
+// may call a function that prints) cannot corrupt the buffer — by the time we
+// format into it, no further user code runs.
+//
+// The single-argument case (the overwhelmingly common one) takes a fast path
+// that allocates nothing: it formats the one value straight into the reused
+// byte buffer. Multiple arguments keep a per-call []string — the same 16 B/elem
+// holder the original used — but drop the strings.Join + Fprintln in favor of
+// the reused buffer.
 func (e *engine) callPrint(x *ast.CallExpr, scope *env) (value.Value, error) {
+	if len(x.Args) == 1 {
+		v, err := e.eval(x.Args[0], scope)
+		if err != nil {
+			return value.Value{}, err
+		}
+		buf := append(e.printBuf[:0], v.String()...)
+		buf = append(buf, '\n')
+		e.printBuf = buf
+		_, _ = e.out.Write(buf)
+		return value.Value{}, nil
+	}
+
 	parts := make([]string, len(x.Args))
 	for i, a := range x.Args {
 		v, err := e.eval(a, scope)
@@ -304,7 +323,16 @@ func (e *engine) callPrint(x *ast.CallExpr, scope *env) (value.Value, error) {
 		}
 		parts[i] = v.String()
 	}
-	fmt.Fprintln(e.out, strings.Join(parts, " "))
+	buf := e.printBuf[:0]
+	for i, s := range parts {
+		if i > 0 {
+			buf = append(buf, ' ')
+		}
+		buf = append(buf, s...)
+	}
+	buf = append(buf, '\n')
+	e.printBuf = buf
+	_, _ = e.out.Write(buf) // matches the previous Fprintln: write errors are not surfaced
 	return value.Value{}, nil
 }
 
