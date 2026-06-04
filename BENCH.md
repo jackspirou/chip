@@ -98,3 +98,33 @@ vs baseline (`-count=6`, benchstat):
 
 All deltas `p=0.002 (n=6)` except `nested_loops` sec/op (`p=0.065`, a one-sample
 timing outlier; its allocs/op and B/op both show a clean −50%).
+
+### 2. `exec`: skip the child scope for blocks that declare nothing
+
+A `for`/`if`/bare block was given a fresh child `*env` unconditionally — every
+loop iteration, every taken branch. But a child scope is only needed to hold and
+isolate `:=` declarations; if a body has no direct `DeclStmt`, running it in the
+enclosing scope is identical (assignments search outward either way, and a
+nested `if`/`for`/block still makes its own scope for *its* declarations). A
+shallow `blockDeclares` scan decides this — once, before the loop in `execFor` —
+and it is cheaper than the scope it avoids allocating.
+
+vs optimization 1 (`-count=6`, benchstat):
+
+| Benchmark | sec/op | B/op | allocs/op |
+|---|--:|--:|--:|
+| `StreamRun/loop_scope` | −8.8% | −99.8% | −99.85% (200,307 → 303) |
+| `StreamRun/nested_loops` | −52.0% | −98.9% | −99.30% (161k → 1.1k) |
+| `StreamRun/string_build` | −13.7% | −2.9% | −46.3% |
+| `StreamRun/call_overhead` | (noise) | −15.4% | −25.0% |
+| `StreamRun/fib` | −3.6% | −8.3% | −14.3% |
+| `StreamRun/loop_decl` | ~ | ~ | ~ (body declares; opt n/a) |
+| **geomean (full suite)** | — | **−57.6%** | **−62.5%** |
+
+`allocs/op` and `B/op` are deterministic (±0%, `p≤0.002`). The `sec/op` figures
+are from a back-to-back A/B (`-count=10`, opt1 stashed/restored on the same
+machine) because the cross-run comparison drifted thermally — `nested_loops`
+read as +9.9% across runs taken minutes apart but is −52% measured back to back,
+and `call_overhead`'s time sample was too noisy to call (its allocs are a clean
+−25%). The loop benchmarks lose ~all per-iteration allocation: `loop_scope`'s
+body binds nothing, so it drops from one child `*env` per iteration to none.

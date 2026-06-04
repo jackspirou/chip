@@ -63,7 +63,11 @@ func (e *engine) execStmt(s ast.Stmt, scope *env) (flow, value.Value, error) {
 		return e.execFor(s, scope)
 
 	case *ast.Block:
-		return e.execStmts(s.List, scope.child())
+		inner := scope
+		if blockDeclares(s.List) {
+			inner = scope.child()
+		}
+		return e.execStmts(s.List, inner)
 
 	case *ast.BadStmt:
 		return flowNormal, value.Value{}, e.errorf(s.Pos(), "malformed statement")
@@ -119,7 +123,11 @@ func (e *engine) execIf(s *ast.IfStmt, scope *env) (flow, value.Value, error) {
 		return flowNormal, value.Value{}, err
 	}
 	if cond.AsBool() {
-		return e.execStmts(s.Body.List, scope.child())
+		inner := scope
+		if blockDeclares(s.Body.List) {
+			inner = scope.child()
+		}
+		return e.execStmts(s.Body.List, inner)
 	}
 	if s.Else != nil {
 		return e.execStmt(s.Else, scope)
@@ -131,6 +139,9 @@ func (e *engine) execIf(s *ast.IfStmt, scope *env) (flow, value.Value, error) {
 // nil condition is an infinite loop (chip has no break yet, so it exits only via
 // return).
 func (e *engine) execFor(s *ast.ForStmt, scope *env) (flow, value.Value, error) {
+	// Whether the body needs a fresh scope is fixed across iterations, so decide
+	// it once: a body that declares nothing runs directly in scope.
+	declares := blockDeclares(s.Body.List)
 	for {
 		if s.Cond != nil {
 			cond, err := e.eval(s.Cond, scope)
@@ -141,7 +152,11 @@ func (e *engine) execFor(s *ast.ForStmt, scope *env) (flow, value.Value, error) 
 				return flowNormal, value.Value{}, nil
 			}
 		}
-		fl, v, err := e.execStmts(s.Body.List, scope.child())
+		inner := scope
+		if declares {
+			inner = scope.child()
+		}
+		fl, v, err := e.execStmts(s.Body.List, inner)
 		if err != nil {
 			return flowNormal, value.Value{}, err
 		}
@@ -175,4 +190,21 @@ func (e *engine) callFunc(fn *ast.FuncDecl, args []value.Value, pos token.Pos) (
 		return value.Value{}, err
 	}
 	return v, nil
+}
+
+// blockDeclares reports whether stmts binds a new variable directly in its own
+// scope — that is, contains a := declaration at this level. A nested if/for/block
+// gets its own child scope, so declarations inside one land there, not here;
+// only a direct DeclStmt forces this block to have a scope of its own. A body
+// that declares nothing can run in its enclosing scope with identical semantics
+// (assignments search outward either way), which lets execFor/execIf skip a
+// per-iteration child *env. The scan is shallow and cheaper than the scope it
+// avoids allocating.
+func blockDeclares(stmts []ast.Stmt) bool {
+	for _, s := range stmts {
+		if _, ok := s.(*ast.DeclStmt); ok {
+			return true
+		}
+	}
+	return false
 }
