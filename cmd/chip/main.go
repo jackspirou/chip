@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/jackspirou/chip/internal/ast"
@@ -59,13 +60,15 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	}
 }
 
-// cmdRun streams and executes a program.
+// cmdRun streams and executes a program, resolving its imports relative to the
+// source file's directory.
 func cmdRun(args []string, stdout, stderr io.Writer) error {
 	path, src, err := readSource(args)
 	if err != nil {
 		return err
 	}
-	if err := stream.Run(bytes.NewReader(src), stdout); err != nil {
+	loader := stream.DirLoader(filepath.Dir(path))
+	if err := stream.RunWithLoader(bytes.NewReader(src), stdout, loader); err != nil {
 		report(stderr, path, src, err)
 		return errReported
 	}

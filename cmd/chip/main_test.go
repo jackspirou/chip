@@ -30,6 +30,29 @@ func TestRunShorthand(t *testing.T) {
 	}
 }
 
+// `chip run main.chp` resolves an import relative to the file's directory and
+// runs the qualified call (PE1 over the real filesystem).
+func TestRunImportsRelativeToFile(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "geometry.chp"),
+		[]byte("package geometry\nfunc Area(w int, h int) int { return w * h }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	mainPath := filepath.Join(dir, "main.chp")
+	if err := os.WriteFile(mainPath,
+		[]byte("import \"geometry\"\nfunc main() { print(geometry.Area(3, 4)) }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := run([]string{"run", mainPath}, nil, &stdout, &stderr); err != nil {
+		t.Fatalf("run: %v (stderr: %s)", err, stderr.String())
+	}
+	if got := stdout.String(); got != "12\n" {
+		t.Fatalf("stdout = %q, want %q", got, "12\n")
+	}
+}
+
 // `chip fmt --check` fails on unformatted source and passes once it is
 // formatted.
 func TestFmtCheck(t *testing.T) {

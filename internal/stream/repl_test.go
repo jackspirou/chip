@@ -22,7 +22,7 @@ func TestREPLPersistsState(t *testing.T) {
 // A persistent engine sees definitions from an earlier feed in a later one.
 func TestEngineFeedSharesState(t *testing.T) {
 	var out bytes.Buffer
-	e := newEngine(&out)
+	e := newEngine(&out, DirLoader("."))
 
 	if err := e.feed(strings.NewReader("func double(n int) int { return n + n }\n")); err != nil {
 		t.Fatalf("feed 1: %v", err)

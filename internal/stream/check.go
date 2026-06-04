@@ -114,7 +114,7 @@ func (e *engine) checkFuncBody(fn *ast.FuncDecl) error {
 		return tc.errorf(fn.Body.Rbrace, "missing return at end of function %s", fn.Name.Name)
 	}
 
-	scope := newTypeEnv(e.globalTypes)
+	scope := newTypeEnv(e.cur.globalTypes)
 	for i, p := range fn.Params {
 		if p.Name != nil {
 			scope.define(p.Name.Name, sig.Params[i])
@@ -127,7 +127,7 @@ func (e *engine) checkFuncBody(fn *ast.FuncDecl) error {
 // before it runs.
 func (e *engine) checkTopStmt(s ast.Stmt) error {
 	tc := &typeChecker{e: e, result: nil}
-	return tc.checkStmt(s, e.globalTypes)
+	return tc.checkStmt(s, e.cur.globalTypes)
 }
 
 // typeChecker checks one function body or one top-level statement. result is the
@@ -164,7 +164,7 @@ func (tc *typeChecker) checkStmt(s ast.Stmt, scope *typeEnv) error {
 		// A := may not redeclare a name already bound in the same block. The
 		// global scope is exempt, so a top-level name (and a REPL binding) can be
 		// redefined.
-		if scope != tc.e.globalTypes {
+		if scope != tc.e.cur.globalTypes {
 			if _, exists := scope.vars[s.Name.Name]; exists {
 				return tc.errorf(s.Name.Pos(), "%s redeclared in this block", s.Name.Name)
 			}
@@ -314,6 +314,9 @@ func (tc *typeChecker) checkExpr(x ast.Expr, scope *typeEnv) (types.Type, error)
 		return tc.checkIndex(x, scope)
 	case *ast.CompositeLit:
 		return tc.checkCompositeLit(x, scope)
+	case *ast.SelectorExpr:
+		// A qualified name is only valid as a call's callee (functions only, P7).
+		return nil, tc.errorf(x.Pos(), "qualified name is only valid as a function call")
 	case *ast.BadExpr:
 		return nil, tc.errorf(x.Pos(), "malformed expression")
 	default:
@@ -391,12 +394,20 @@ func (tc *typeChecker) checkBinary(x *ast.BinaryExpr, scope *typeEnv) (types.Typ
 	}
 }
 
+// checkCall dispatches by the shape of the callee — a bare name (a builtin or a
+// function in scope) or a qualified pkg.Member — mirroring the executor.
 func (tc *typeChecker) checkCall(x *ast.CallExpr, scope *typeEnv) (types.Type, error) {
-	id, ok := x.Fn.(*ast.Ident)
-	if !ok {
+	switch fn := x.Fn.(type) {
+	case *ast.Ident:
+		return tc.checkIdentCall(x, fn, scope)
+	case *ast.SelectorExpr:
+		return tc.checkQualifiedCall(x, fn, scope)
+	default:
 		return nil, tc.errorf(x.Fn.Pos(), "only direct function calls are supported")
 	}
+}
 
+func (tc *typeChecker) checkIdentCall(x *ast.CallExpr, id *ast.Ident, scope *typeEnv) (types.Type, error) {
 	switch id.Name {
 	case "print":
 		for _, a := range x.Args {
@@ -419,15 +430,37 @@ func (tc *typeChecker) checkCall(x *ast.CallExpr, scope *typeEnv) (types.Type, e
 		return types.Int, nil
 	}
 
-	fn, err := tc.e.resolve(id.Name)
+	fn, _, err := tc.e.resolve(id.Name)
 	if err != nil {
 		return nil, err
 	}
 	if fn == nil {
 		return nil, tc.errorf(id.Pos(), "undefined: %s", id.Name)
 	}
-	sig := tc.e.sigOf(fn)
+	return tc.checkCallSig(x, tc.e.sigOf(fn), scope)
+}
 
+// checkQualifiedCall checks pkg.Member(...): the named import must be in scope
+// and must define the member.
+func (tc *typeChecker) checkQualifiedCall(x *ast.CallExpr, sel *ast.SelectorExpr, scope *typeEnv) (types.Type, error) {
+	pkgID, ok := sel.X.(*ast.Ident)
+	if !ok {
+		return nil, tc.errorf(sel.X.Pos(), "only direct function calls are supported")
+	}
+	p, ok := tc.e.cur.imports[pkgID.Name]
+	if !ok {
+		return nil, tc.errorf(pkgID.Pos(), "undefined: %s", pkgID.Name)
+	}
+	fn, ok := p.funcs[sel.Sel.Name]
+	if !ok {
+		return nil, tc.errorf(sel.Sel.Pos(), "undefined: %s.%s", pkgID.Name, sel.Sel.Name)
+	}
+	return tc.checkCallSig(x, tc.e.sigOf(fn), scope)
+}
+
+// checkCallSig checks a call's argument count and types against a resolved
+// signature and returns the call's result type.
+func (tc *typeChecker) checkCallSig(x *ast.CallExpr, sig *types.Signature, scope *typeEnv) (types.Type, error) {
 	if len(x.Args) != len(sig.Params) {
 		return nil, tc.errorf(x.Lparen, "wrong number of arguments: got %d, want %d", len(x.Args), len(sig.Params))
 	}

@@ -34,6 +34,10 @@ func (e *engine) eval(x ast.Expr, scope *env) (value.Value, error) {
 		return e.evalCompositeLit(x, scope)
 	case *ast.IndexExpr:
 		return e.evalIndex(x, scope)
+	case *ast.SelectorExpr:
+		// A qualified name is only meaningful as a call's callee; the checker
+		// rejects it elsewhere, so this is a defensive guard (D10).
+		return value.Value{}, e.errorf(x.Pos(), "qualified name is only valid as a function call")
 	case *ast.BadExpr:
 		return value.Value{}, e.errorf(x.Pos(), "malformed expression")
 	default:
@@ -197,12 +201,23 @@ func ordered[T int64 | float64 | string](op token.Type, x, y T) bool {
 	return false
 }
 
+// evalCall dispatches a call by the shape of its callee: a bare name (a builtin
+// or a function in scope) or a qualified pkg.Member.
 func (e *engine) evalCall(x *ast.CallExpr, scope *env) (value.Value, error) {
-	id, ok := x.Fn.(*ast.Ident)
-	if !ok {
+	switch fn := x.Fn.(type) {
+	case *ast.Ident:
+		return e.evalIdentCall(x, fn, scope)
+	case *ast.SelectorExpr:
+		return e.evalQualifiedCall(x, fn, scope)
+	default:
 		return value.Value{}, e.errorf(x.Fn.Pos(), "only direct function calls are supported")
 	}
+}
 
+// evalIdentCall handles a builtin or an unqualified function call, resolving the
+// name in the current package (reading ahead for a forward reference) or the
+// prelude.
+func (e *engine) evalIdentCall(x *ast.CallExpr, id *ast.Ident, scope *env) (value.Value, error) {
 	switch id.Name {
 	case "print":
 		return e.callPrint(x, scope)
@@ -212,23 +227,64 @@ func (e *engine) evalCall(x *ast.CallExpr, scope *env) (value.Value, error) {
 
 	// A user function may be referenced before it streams in; resolve reads
 	// ahead until it arrives or the stream ends.
-	fn, err := e.resolve(id.Name)
+	fn, home, err := e.resolve(id.Name)
 	if err != nil {
 		return value.Value{}, err
 	}
 	if fn == nil {
 		return value.Value{}, e.errorf(id.Pos(), "undefined: %s", id.Name)
 	}
+	args, err := e.evalArgs(x.Args, scope)
+	if err != nil {
+		return value.Value{}, err
+	}
+	return e.callIn(home, fn, args, x.Lparen)
+}
 
-	args := make([]value.Value, len(x.Args))
-	for i, a := range x.Args {
+// evalQualifiedCall handles pkg.Member(...): resolve the import bound under the
+// package name, then the member in that package.
+func (e *engine) evalQualifiedCall(x *ast.CallExpr, sel *ast.SelectorExpr, scope *env) (value.Value, error) {
+	pkgID, ok := sel.X.(*ast.Ident)
+	if !ok {
+		return value.Value{}, e.errorf(sel.X.Pos(), "only direct function calls are supported")
+	}
+	p, ok := e.cur.imports[pkgID.Name]
+	if !ok {
+		return value.Value{}, e.errorf(pkgID.Pos(), "undefined: %s", pkgID.Name)
+	}
+	fn, ok := p.funcs[sel.Sel.Name]
+	if !ok {
+		return value.Value{}, e.errorf(sel.Sel.Pos(), "undefined: %s.%s", pkgID.Name, sel.Sel.Name)
+	}
+	args, err := e.evalArgs(x.Args, scope)
+	if err != nil {
+		return value.Value{}, err
+	}
+	return e.callIn(p, fn, args, x.Lparen)
+}
+
+// evalArgs evaluates a call's arguments left to right.
+func (e *engine) evalArgs(exprs []ast.Expr, scope *env) ([]value.Value, error) {
+	args := make([]value.Value, len(exprs))
+	for i, a := range exprs {
 		v, err := e.eval(a, scope)
 		if err != nil {
-			return value.Value{}, err
+			return nil, err
 		}
 		args[i] = v
 	}
-	return e.callFunc(fn, args, x.Lparen)
+	return args, nil
+}
+
+// callIn runs fn with the current package switched to home (the package that
+// owns fn) so unqualified references inside fn resolve against fn's own package,
+// then restores the caller's package.
+func (e *engine) callIn(home *pkg, fn *ast.FuncDecl, args []value.Value, pos token.Pos) (value.Value, error) {
+	prev := e.cur
+	e.cur = home
+	v, err := e.callFunc(fn, args, pos)
+	e.cur = prev
+	return v, err
 }
 
 // callPrint evaluates each argument and writes them space-separated, newline

@@ -161,7 +161,7 @@ func (e *engine) callFunc(fn *ast.FuncDecl, args []value.Value, pos token.Pos) (
 		return value.Value{}, e.errorf(pos, "%s expects %d argument(s), got %d", fn.Name.Name, len(fn.Params), len(args))
 	}
 
-	scope := newEnv(e.global)
+	scope := newEnv(e.cur.global)
 	for i, p := range fn.Params {
 		if p.Name != nil {
 			scope.define(p.Name.Name, args[i])
