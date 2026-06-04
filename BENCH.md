@@ -186,3 +186,77 @@ which is inherent. The reused `printBuf` grows once per run and is amortized awa
 The only programs that call `print` more than once at top level are `print_loop`
 and the example files; the rest print a single result, so this change is a wash
 for them and a large win wherever printing is on the hot path.
+
+## Tried and reverted
+
+### `evalArgs`: caller-provided stack buffer for low-arity calls
+
+`evalArgs` heap-allocates a `[]value.Value` for every call's arguments. The idea
+was to evaluate into a small fixed array declared on the caller's stack
+(`var buf [4]value.Value`; spill to the heap only when a call has more arguments
+than that), so the common low-arity call allocates nothing for its argument list.
+
+It does not work here, and escape analysis says exactly why. The arguments flow
+`evalIdentCall → callIn → callFunc`, where `callFunc` binds each into the new
+(heap-allocated, GC'd) scope — so `callFunc` and `callIn` both carry
+`leaking param content: args`, and `evalArgsBuf` returns the buffer it was handed
+(`leaking param: buf to result`). With the buffer reaching a leaking parameter,
+`go build -gcflags=-m` reports `moved to heap: buf`: the array is heap-allocated
+regardless. That is strictly worse than the status quo — a fixed 224 B (`[4]`) or
+448 B (`[8]`) heap allocation on every call, versus the right-sized 64 B that
+`make([]value.Value, 1)` costs the dominant single-argument call. Reverted; the
+`make`-per-call in `evalArgs` stays. (A caller-provided buffer can only stay on
+the stack if the callee is proven non-escaping, and a tree-walker's `callFunc` —
+which stores arguments into a heap scope and recurses — never will be.)
+
+## Cumulative result (baseline → final)
+
+The four landed optimizations together, `148052b` (baseline) vs `3ecb3e1`
+(final), full suite at `-count=6`, benchstat. All deltas `p=0.002 (n=6)`; `B/op`
+and `allocs/op` are deterministic (±0%), and this run's `sec/op` variance was low
+(≤3% except `loop_decl`'s baseline sample at ±14%).
+
+| Benchmark | sec/op | B/op | allocs/op |
+|---|--:|--:|--:|
+| `StreamRun/fib` | −39.6% | −79.6% | −40.0% |
+| `StreamRun/call_overhead` | −51.4% | −80.3% | −50.0% |
+| `StreamRun/loop_scope` | −49.1% | −99.90% | −99.92% |
+| `StreamRun/loop_decl` | −58.0% | −85.4% | −33.3% |
+| `StreamRun/nested_loops` | −50.2% | −99.45% | −99.65% |
+| `StreamRun/string_build` | −29.4% | −5.7% | −63.4% |
+| `StreamRun/array_build` | −43.2% | −56.0% | −24.0% |
+| `StreamRun/mutual_recursion` | −40.5% | −79.0% | −28.4% |
+| `StreamRun/import_math` | −27.1% | −59.8% | −14.3% |
+| `Examples/fibonacci.chp` | −31.3% | −73.4% | −29.4% |
+| `Examples/mutual_recursion.chp` | −6.7% | −30.9% | −3.8% |
+| `Examples/arrays.chp` | −3.3% | −7.6% | −2.8% |
+| `Examples/gcd.chp` | −2.7% | −13.9% | −1.5% |
+| **geomean** | **−35.6%** | **−82.4%** | **−72.2%** |
+
+(`print_loop` is new in the final suite and has no baseline; its delta is in §4.)
+
+## Summary
+
+What landed, in order, one commit each:
+
+1. **`env` as a `[]binding`, not a `map`** (`182e23c`) — the largest single win.
+   chip scopes hold a handful of names; a map paid a header (and a bucket once
+   populated) per scope. A linearly-scanned slice removes both.
+2. **Skip the child scope for blocks that declare nothing** (`5522ad6`) — a
+   `for`/`if`/bare block only needs its own scope to hold `:=` declarations; a
+   `blockDeclares` scan lets the declaration-free ones (every `loop_scope` and
+   `nested_loops` iteration) run in the enclosing scope. This is what takes those
+   two to ~−99.9% allocations.
+3. **56-byte `Value`** (`5b1fcbd`) — the int/bool/float payloads share one word,
+   shrinking every `[]Value` and every by-value return. No allocation-count
+   change; it shaves bytes and copy time.
+4. **`callPrint` into a reused buffer** (`3ecb3e1`) — drops single-argument
+   `print` from two allocations to one and removes its per-call holder slice.
+
+Reverted: the `evalArgs` caller-provided stack buffer (above) — escape analysis
+forces it to the heap, making it a regression.
+
+Constraints held throughout: no `unsafe`/arenas/cgo, no GC tuning, no shared
+reused value stack; scope lifetime still equals Go object lifetime; output, error
+messages, and error positions are byte-for-byte unchanged (verified through the
+CLI); `go test ./...` and `go vet ./...` are clean.
