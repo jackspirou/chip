@@ -1,43 +1,63 @@
-chip [![CI](https://github.com/jackspirou/chip/actions/workflows/ci.yml/badge.svg)](https://github.com/jackspirou/chip/actions/workflows/ci.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/jackspirou/chip.svg)](https://pkg.go.dev/github.com/jackspirou/chip) [![Go Report Card](https://goreportcard.com/badge/github.com/jackspirou/chip)](https://goreportcard.com/report/github.com/jackspirou/chip) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-====
-Chip is a toy systems scripting language.
+# chip
 
-Motivation
-----------
-Long ago I wrote a compiler in Java. It was for a two-part college compilers
-course series. The language was known as SNARL and the compiler output was MIPS
-assembly (asm) code. Since we had no MIPS machines readily available, the
-asm was then ported to a MIPS emulator.
+[![CI](https://github.com/jackspirou/chip/actions/workflows/ci.yml/badge.svg)](https://github.com/jackspirou/chip/actions/workflows/ci.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/jackspirou/chip.svg)](https://pkg.go.dev/github.com/jackspirou/chip) [![Go Report Card](https://goreportcard.com/badge/github.com/jackspirou/chip)](https://goreportcard.com/report/github.com/jackspirou/chip) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-While the SNARL compiler was a simple toy for academic purposes, I noticed that
-the simplicity of it's design provided powerful foundations to explore further.
-A couple years later, I stumbled upon Golang and it reminded me of the same
-simplicity of SNARL. It was refreshing after writing lots of Java and C++.
+A toy systems scripting language with Go-like syntax that runs as a
+demand-driven stream.
 
-It is important to note that while Golang is lexically simple, it's runtime
-(GC, green threads), CSP design, optimizations, and available target hardware
-architecture implementations are not trivial. Simple is not trivial.
+```chip
+func gcd(a int, b int) int {
+    if b == 0 {
+        return a
+    }
+    return gcd(b, a % b)
+}
 
-Anyway, excited that Golang's spirit of lexical simplicity seemed to support
-the value I saw in SNARL, I was inspired to try writing a toy scripting
-language that was equal with, or exceeded the lexically simplicity of Go. It
-seemed obvious to leverage Golang for the implementation of this idea.
-
-With Go as a guide, I want to produce a toy scripting language that has extreme
-minimal syntax. I also want the Go implementation to be idiomatic.
-
-This project is not a race, but a labor of love.
-
-Try it
-------
-```sh
-go build -o chip ./cmd/chip
-./chip run examples/hello.chp     # or the shorthand: ./chip examples/hello.chp
-./chip repl                       # an interactive session
+func main() {
+    print(gcd(252, 105))   // 21
+}
 ```
 
-Learn more
-----------
-- [ARCHITECTURE.md](ARCHITECTURE.md) — how chip streams: the demand-driven pull
-  engine, the checked tree-walker, the standard library, and the package layout.
+## Why chip
+
+- **Streaming execution.** A program runs as it is read — there is no
+  whole-program gate. A statement can even call a function defined further down
+  the file; chip reads ahead to resolve it
+  ([example](examples/forward_reference.chp)).
+- **Minimal, Go-like syntax.** `func`, `:=`, `if`, `for`, and little else.
+- **Strongly typed, incrementally.** Type checking is woven into the stream,
+  not run as a separate pass.
+- **Pure Go.** No cgo, no codegen backend — embed it as a library or use the CLI.
+- **A standard library written in chip.** Only `print` and `len` are built in;
+  the rest grows in chip.
+
+## Install
+
+```sh
+go install github.com/jackspirou/chip/cmd/chip@latest
+```
+
+## Usage
+
+```sh
+chip run examples/hello.chp   # run a program (shorthand: chip examples/hello.chp)
+chip repl                     # interactive session
+chip fmt  <file.chp>          # canonical formatting
+chip lint <file.chp>          # unused names, missing returns, dead code
+```
+
+## Learn more
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) — how chip streams, and the package layout.
 - [examples/](examples/) — small, runnable programs, each verified by a test.
+
+## Status
+
+A learning project and a labor of love — expect rough edges and breaking
+changes. chip reimagines SNARL, a MIPS-targeting teaching compiler, in the
+spirit of Go's lexical simplicity: extreme minimal syntax, idiomatic Go
+implementation.
+
+## License
+
+[MIT](LICENSE)
