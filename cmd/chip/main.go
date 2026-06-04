@@ -1,4 +1,4 @@
-// Command chip compiles and runs chip source files.
+// Command chip runs, formats, and inspects chip source files.
 package main
 
 import (
@@ -16,8 +16,8 @@ import (
 	"github.com/jackspirou/chip/internal/format"
 	"github.com/jackspirou/chip/internal/lint"
 	"github.com/jackspirou/chip/internal/parser"
+	"github.com/jackspirou/chip/internal/stream"
 	"github.com/jackspirou/chip/internal/token"
-	"github.com/jackspirou/chip/internal/vm"
 )
 
 // errReported marks an error that has already been printed with full context,
@@ -25,7 +25,7 @@ import (
 var errReported = errors.New("reported")
 
 func main() {
-	if err := run(os.Args[1:]); err != nil {
+	if err := run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr); err != nil {
 		if !errors.Is(err, errReported) {
 			fmt.Fprintln(os.Stderr, "chip:", err)
 		}
@@ -33,50 +33,52 @@ func main() {
 	}
 }
 
-func run(args []string) error {
+func run(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		usage(os.Stderr)
+		usage(stderr)
 		return errReported
 	}
 	switch args[0] {
 	case "run":
-		return cmdRun(args[1:])
+		return cmdRun(args[1:], stdout, stderr)
+	case "repl":
+		return cmdRepl(stdin, stdout)
 	case "fmt":
-		return cmdFmt(args[1:])
+		return cmdFmt(args[1:], stdout, stderr)
 	case "lint":
-		return cmdLint(args[1:])
+		return cmdLint(args[1:], stderr)
 	case "dump":
-		return cmdDump(args[1:])
+		return cmdDump(args[1:], stdout, stderr)
 	case "ast":
-		return cmdAst(args[1:])
+		return cmdAst(args[1:], stdout, stderr)
 	case "help", "-h", "--help":
-		usage(os.Stdout)
+		usage(stdout)
 		return nil
 	default:
-		return cmdRun(args) // `chip file.chp` is shorthand for `chip run file.chp`
+		return cmdRun(args, stdout, stderr) // `chip file.chp` is shorthand for `chip run file.chp`
 	}
 }
 
-// cmdRun compiles and executes a program.
-func cmdRun(args []string) error {
+// cmdRun streams and executes a program.
+func cmdRun(args []string, stdout, stderr io.Writer) error {
 	path, src, err := readSource(args)
 	if err != nil {
 		return err
 	}
-	prog, err := build(src)
-	if err != nil {
-		report(os.Stderr, path, src, err)
-		return errReported
-	}
-	if err := vm.Run(prog, os.Stdout); err != nil {
-		report(os.Stderr, path, src, err)
+	if err := stream.Run(bytes.NewReader(src), stdout); err != nil {
+		report(stderr, path, src, err)
 		return errReported
 	}
 	return nil
 }
 
+// cmdRepl evaluates source read line by line, carrying definitions over.
+func cmdRepl(stdin io.Reader, stdout io.Writer) error {
+	return stream.REPL(stdin, stdout)
+}
+
 // cmdFmt prints a program in canonical form (or rewrites it in place with -w).
-func cmdFmt(args []string) error {
+func cmdFmt(args []string, stdout, stderr io.Writer) error {
 	write := false
 	if len(args) > 0 && args[0] == "-w" {
 		write, args = true, args[1:]
@@ -87,68 +89,66 @@ func cmdFmt(args []string) error {
 	}
 	out, err := format.Source(src)
 	if err != nil {
-		report(os.Stderr, path, src, err)
+		report(stderr, path, src, err)
 		return errReported
 	}
 	if write {
 		return os.WriteFile(path, out, 0o644)
 	}
-	if _, err := os.Stdout.Write(out); err != nil {
-		return err
-	}
-	return nil
+	_, err = stdout.Write(out)
+	return err
 }
 
 // cmdLint reports style and correctness issues.
-func cmdLint(args []string) error {
+func cmdLint(args []string, stderr io.Writer) error {
 	path, src, err := readSource(args)
 	if err != nil {
 		return err
 	}
 	f, perr := parse(src)
 	if perr != nil {
-		report(os.Stderr, path, src, perr)
+		report(stderr, path, src, perr)
 		return errReported
 	}
 	info, cerr := check.Check(f)
 	if cerr != nil {
-		report(os.Stderr, path, src, cerr)
+		report(stderr, path, src, cerr)
 		return errReported
 	}
 	if issues := lint.Lint(f, info); len(issues) > 0 {
-		report(os.Stderr, path, src, issues)
+		report(stderr, path, src, issues)
 		return errReported
 	}
 	return nil
 }
 
-// cmdDump disassembles a program's bytecode.
-func cmdDump(args []string) error {
+// cmdDump disassembles a program's bytecode (the batch compile path).
+func cmdDump(args []string, stdout, stderr io.Writer) error {
 	path, src, err := readSource(args)
 	if err != nil {
 		return err
 	}
 	prog, err := build(src)
 	if err != nil {
-		report(os.Stderr, path, src, err)
+		report(stderr, path, src, err)
 		return errReported
 	}
-	fmt.Print(prog.String())
+	fmt.Fprint(stdout, prog.String())
 	return nil
 }
 
 // cmdAst prints a program's syntax tree.
-func cmdAst(args []string) error {
+func cmdAst(args []string, stdout, stderr io.Writer) error {
 	path, src, err := readSource(args)
 	if err != nil {
 		return err
 	}
 	f, perr := parse(src)
 	if perr != nil {
-		report(os.Stderr, path, src, perr)
+		report(stderr, path, src, perr)
 		return errReported
 	}
-	fmt.Println(ast.Sprint(f))
+	fmt.Fprintln(stdout, ast.Sprint(f))
 	return nil
 }
 
@@ -209,7 +209,9 @@ func report(w io.Writer, filename string, src []byte, err error) {
 		for _, d := range e {
 			emit(d.Pos, d.Msg)
 		}
-	case vm.RuntimeError:
+	case stream.TypeError:
+		emit(e.Pos, e.Msg)
+	case stream.RuntimeError:
 		emit(e.Pos, e.Msg)
 	default:
 		fmt.Fprintf(w, "%s: %s\n", filename, err)
@@ -217,10 +219,11 @@ func report(w io.Writer, filename string, src []byte, err error) {
 }
 
 func usage(w io.Writer) {
-	fmt.Fprint(w, `chip is a toy compiled scripting language.
+	fmt.Fprint(w, `chip is a toy streaming scripting language.
 
 usage:
-    chip run  <file.chp>    compile and run a program
+    chip run  <file.chp>    stream and run a program
+    chip repl               evaluate source line by line, carrying state over
     chip fmt  <file.chp>    print canonical formatting (-w rewrites in place)
     chip lint <file.chp>    report unused names, missing returns, dead code
     chip dump <file.chp>    disassemble a program's bytecode

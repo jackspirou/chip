@@ -18,6 +18,7 @@ import (
 	"github.com/jackspirou/chip/internal/format"
 	"github.com/jackspirou/chip/internal/lint"
 	"github.com/jackspirou/chip/internal/parser"
+	"github.com/jackspirou/chip/internal/stream"
 	"github.com/jackspirou/chip/internal/vm"
 )
 
@@ -81,13 +82,12 @@ func (p *Program) Run(out io.Writer) error {
 	return nil
 }
 
-// Run compiles and executes chip source, writing program output to out.
+// Run streams and executes chip source, writing program output to out. Unlike
+// Compile, it runs the program as a demand-driven stream: there is no
+// whole-program gate, and top-level statements run as they arrive. On a parse,
+// type, or runtime error it returns an *Error carrying positioned diagnostics.
 func Run(src []byte, out io.Writer) error {
-	p, err := Compile(src)
-	if err != nil {
-		return err
-	}
-	return p.Run(out)
+	return asError(stream.Run(bytes.NewReader(src), out))
 }
 
 // Format returns src rewritten in canonical form. Like gofmt, it only requires
@@ -151,6 +151,10 @@ func diagnostics(v any) []Diagnostic {
 			ds = append(ds, Diagnostic{Line: d.Pos.Line, Col: d.Pos.Column, Msg: d.Msg})
 		}
 	case vm.RuntimeError:
+		ds = append(ds, Diagnostic{Line: e.Pos.Line, Col: e.Pos.Column, Msg: e.Msg})
+	case stream.TypeError:
+		ds = append(ds, Diagnostic{Line: e.Pos.Line, Col: e.Pos.Column, Msg: e.Msg})
+	case stream.RuntimeError:
 		ds = append(ds, Diagnostic{Line: e.Pos.Line, Col: e.Pos.Column, Msg: e.Msg})
 	}
 	return ds

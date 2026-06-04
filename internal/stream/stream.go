@@ -6,17 +6,19 @@
 //
 // The engine consumes parser.Items() with iter.Pull2 on a single goroutine —
 // the Go call stack is the suspension when a symbol must be read ahead for (see
-// the plan's §3). It is a tree-walker, not the bytecode VM (D8): there is no
-// compile pass on the run path, so no whole-program gate can exist.
-//
-// Slice 1 runs untyped: it trusts its input and operates on runtime value
-// kinds, exactly as the VM does. Incremental type checking arrives in Slice 2.
+// the plan's §3). It is a checked tree-walker, not the bytecode VM (D8): each
+// function body is type-checked when it registers and each top-level statement
+// just before it runs, so there is no compile pass and no whole-program gate.
+// The engine's tables persist across sources, so a whole file (Run) and a
+// line-by-line session (REPL) share one implementation.
 package stream
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"iter"
+	"strings"
 
 	"github.com/jackspirou/chip/internal/ast"
 	"github.com/jackspirou/chip/internal/parser"
@@ -29,64 +31,88 @@ import (
 const maxCallDepth = 1 << 14
 
 // Run streams chip source from src, executing top-level items as they arrive
-// and writing program output to out. It is the demand-driven counterpart to the
-// batch compile+VM path.
+// and writing program output to out. If the source has no top-level statements
+// but defines main, main runs at end of input.
 func Run(src io.Reader, out io.Writer) error {
-	e, err := newEngine(src, out)
-	if err != nil {
+	e := newEngine(out)
+	if err := e.feed(src); err != nil {
 		return err
 	}
-	defer e.close()
-	return e.run()
+	return e.runMain()
 }
 
-// engine is a demand-driven streaming evaluator over a pull iterator of
-// top-level items.
+// REPL evaluates chip source read line by line from in against a persistent
+// engine — definitions and top-level variables carry over between lines — and
+// writes program output and errors to out. Each line is its own source, so
+// forward references across lines do not resolve: define before use.
+func REPL(in io.Reader, out io.Writer) error {
+	e := newEngine(out)
+	sc := bufio.NewScanner(in)
+	for sc.Scan() {
+		if strings.TrimSpace(sc.Text()) == "" {
+			continue
+		}
+		if err := e.feed(strings.NewReader(sc.Text())); err != nil {
+			fmt.Fprintln(out, err)
+		}
+	}
+	return sc.Err()
+}
+
+// engine is a demand-driven streaming evaluator. Its symbol tables and global
+// scope persist across feed calls, which is what lets the REPL share state.
 type engine struct {
-	next        func() (ast.Node, error, bool)
-	stop        func()
 	out         io.Writer
 	funcs       map[string]*ast.FuncDecl           // registered function definitions
 	sigs        map[*ast.FuncDecl]*types.Signature // memoized function signatures
 	checked     map[*ast.FuncDecl]bool             // bodies already type-checked (D9)
-	pending     []ast.Stmt                         // top-level statements awaiting execution (FIFO)
 	global      *env                               // top-level variable bindings
 	globalTypes *typeEnv                           // top-level variable types (for checking)
-	depth       int                                // current call depth (recursion guard)
+
+	// per-source pull state, (re)set by feed
+	next    func() (ast.Node, error, bool)
+	pending []ast.Stmt // top-level statements awaiting execution (FIFO)
+	ranStmt bool       // whether any top-level statement ran (gates main-at-EOF)
+	depth   int        // current call depth (recursion guard)
 }
 
-func newEngine(src io.Reader, out io.Writer) (*engine, error) {
-	p, err := parser.New(src)
-	if err != nil {
-		return nil, err
-	}
-	next, stop := iter.Pull2(p.Items())
+func newEngine(out io.Writer) *engine {
 	return &engine{
-		next:        next,
-		stop:        stop,
 		out:         out,
 		funcs:       make(map[string]*ast.FuncDecl),
 		sigs:        make(map[*ast.FuncDecl]*types.Signature),
 		checked:     make(map[*ast.FuncDecl]bool),
 		global:      newEnv(nil),
 		globalTypes: newTypeEnv(nil),
-	}, nil
+	}
 }
 
-// close releases the engine's pull iterator.
-func (e *engine) close() { e.stop() }
+// feed streams one source through the engine, sharing accumulated state. It
+// processes every item — registering definitions, running top-level statements
+// in order — until the source ends. It does not run main; Run does that once,
+// after the whole file is consumed.
+func (e *engine) feed(src io.Reader) error {
+	p, err := parser.New(src)
+	if err != nil {
+		return err
+	}
+	next, stop := iter.Pull2(p.Items())
+	defer stop()
+	e.next = next
+	e.pending = nil
+	e.ranStmt = false
+	return e.drain()
+}
 
-// run is the pull loop: drain a pending statement, otherwise pull the next item
-// — registering definitions and queuing statements — until the stream ends. If
-// no top-level statement ran and main is defined, call main at EOF, so a
-// batch-style program (only declarations) still runs.
-func (e *engine) run() error {
-	ranStmt := false
+// drain is the pull loop: drain a pending statement (type-checked first, then
+// trusting the checker per D10), otherwise pull the next item — registering
+// definitions and queuing statements — until the source ends.
+func (e *engine) drain() error {
 	for {
 		if len(e.pending) == 0 {
 			item, perr, ok := e.next()
 			if !ok {
-				break // EOF
+				return nil // source exhausted
 			}
 			if perr != nil {
 				return perr
@@ -98,9 +124,7 @@ func (e *engine) run() error {
 		}
 		stmt := e.pending[0]
 		e.pending = e.pending[1:]
-		ranStmt = true
-		// Type-check the statement just before running it, then trust the
-		// checker (D10) and execute.
+		e.ranStmt = true
 		if err := e.checkTopStmt(stmt); err != nil {
 			return err
 		}
@@ -108,15 +132,20 @@ func (e *engine) run() error {
 			return err
 		}
 	}
+}
 
-	if !ranStmt {
-		if main, ok := e.funcs["main"]; ok {
-			if _, err := e.callFunc(main, nil, main.Pos()); err != nil {
-				return err
-			}
-		}
+// runMain calls main if it is defined and no top-level statement ran, so a
+// batch-style program (only declarations) still executes.
+func (e *engine) runMain() error {
+	if e.ranStmt {
+		return nil
 	}
-	return nil
+	main, ok := e.funcs["main"]
+	if !ok {
+		return nil
+	}
+	_, err := e.callFunc(main, nil, main.Pos())
+	return err
 }
 
 // register records a function definition or queues a top-level statement. A
