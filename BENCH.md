@@ -128,3 +128,30 @@ read as +9.9% across runs taken minutes apart but is −52% measured back to bac
 and `call_overhead`'s time sample was too noisy to call (its allocs are a clean
 −25%). The loop benchmarks lose ~all per-iteration allocation: `loop_scope`'s
 body binds nothing, so it drops from one child `*env` per iteration to none.
+
+### 3. `value`: 56-byte Value (merge the int/float/bool word)
+
+`Value`'s `int`, `bool`, and `float` payloads each fit in 8 bytes and are never
+live at the same time as one another, so they shared one `uint64` (a float is
+held as `math.Float64bits`). That drops `Value` from 64 to 56 bytes with no API
+or behavior change — the accessors are byte-identical. This does not change
+allocation *counts*; it shrinks every `[]Value` and the bytes copied on each of
+the millions of by-value returns the tree-walker makes.
+
+vs optimization 2, back-to-back A/B (opt2 stashed/restored on the same machine):
+
+| Benchmark | sec/op | B/op | allocs/op |
+|---|--:|--:|--:|
+| `StreamRun/array_build` | −9.8% | −10.2% (512→448 B/literal) | ~ |
+| `StreamRun/import_math` | −2.1% | −8.0% (Gcd's 2-arg slice 128→112 B) | ~ |
+| `StreamRun/string_build` | −14.8% | ~ | ~ |
+| `StreamRun/fib` | −12.2% | ~ | ~ |
+| `StreamRun/call_overhead` | −8.8% | ~ | ~ |
+| `StreamRun/loop_scope` | −8.9% | ~ | ~ |
+| `StreamRun/nested_loops` | −6.6% | ~ | ~ |
+
+`B/op` falls only where a slice's element count crosses a Go size class (8-elem
+and 2-elem `[]Value`); a 1-element slice is unchanged because 56 B still rounds
+up to the 64 B class. The `sec/op` gains come from copying a smaller `Value`.
+(`string_build` first read +42.9% in a `-count=10` sample but −14.8% at
+`-count=20` — a load spike; its string path never touches the merged word.)

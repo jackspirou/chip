@@ -2,6 +2,7 @@
 package value
 
 import (
+	"math"
 	"strconv"
 	"strings"
 )
@@ -17,20 +18,23 @@ const (
 	KindSlice
 )
 
-// Value is a chip runtime value: a small tagged union.
+// Value is a chip runtime value: a small tagged union. The int, bool, and float
+// payloads share one 8-byte word (a float is held as its IEEE-754 bits), which
+// keeps Value at 56 bytes — a scalar never needs the string header or the slice
+// header, so overlapping the numeric payload costs nothing and shrinks every
+// copy the tree-walker makes.
 type Value struct {
 	Kind Kind
-	n    int64   // int, and bool as 0/1
-	f    float64 // float
+	n    uint64  // int (as bits), bool (0/1), or float64 bits — by Kind
 	s    string  // string
 	a    []Value // slice elements (reference semantics)
 }
 
 // Int returns an integer value.
-func Int(n int64) Value { return Value{Kind: KindInt, n: n} }
+func Int(n int64) Value { return Value{Kind: KindInt, n: uint64(n)} }
 
 // Float returns a floating-point value.
-func Float(f float64) Value { return Value{Kind: KindFloat, f: f} }
+func Float(f float64) Value { return Value{Kind: KindFloat, n: math.Float64bits(f)} }
 
 // Bool returns a boolean value.
 func Bool(b bool) Value {
@@ -48,10 +52,10 @@ func Str(s string) Value { return Value{Kind: KindString, s: s} }
 func Slice(elems []Value) Value { return Value{Kind: KindSlice, a: elems} }
 
 // AsInt returns the value as an int64.
-func (v Value) AsInt() int64 { return v.n }
+func (v Value) AsInt() int64 { return int64(v.n) }
 
 // AsFloat returns the value as a float64.
-func (v Value) AsFloat() float64 { return v.f }
+func (v Value) AsFloat() float64 { return math.Float64frombits(v.n) }
 
 // AsBool returns the value as a bool.
 func (v Value) AsBool() bool { return v.n != 0 }
@@ -66,9 +70,9 @@ func (v Value) AsSlice() []Value { return v.a }
 func (v Value) String() string {
 	switch v.Kind {
 	case KindInt:
-		return strconv.FormatInt(v.n, 10)
+		return strconv.FormatInt(int64(v.n), 10)
 	case KindFloat:
-		return strconv.FormatFloat(v.f, 'g', -1, 64)
+		return strconv.FormatFloat(math.Float64frombits(v.n), 'g', -1, 64)
 	case KindBool:
 		if v.n != 0 {
 			return "true"
