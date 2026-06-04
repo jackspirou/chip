@@ -30,6 +30,7 @@ type (
 		Package  *Ident
 		Imports  []*ImportSpec
 		Decls    []Decl
+		Stmts    []Stmt     // top-level statements, in source order
 		Comments []*Comment // all comments, in source order
 	}
 )
@@ -57,13 +58,16 @@ func (d *ImportSpec) Pos() token.Pos {
 }
 
 func (d *File) Pos() token.Pos {
-	if d.Package != nil {
+	switch {
+	case d.Package != nil:
 		return d.Package.Pos()
-	}
-	if len(d.Decls) > 0 {
+	case len(d.Decls) > 0:
 		return d.Decls[0].Pos()
+	case len(d.Stmts) > 0:
+		return d.Stmts[0].Pos()
+	default:
+		return token.Pos{}
 	}
-	return token.Pos{}
 }
 
 func (*Field) node()      {}

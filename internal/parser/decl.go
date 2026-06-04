@@ -15,11 +15,11 @@ func (p *Parser) parseFile() *ast.File {
 
 	for p.tok.Type != token.EOF {
 		start := p.nadv
-		switch p.tok.Type {
-		case token.FUNC:
-			file.Decls = append(file.Decls, p.parseFuncDecl())
-		default:
-			p.errorf(p.pos(), "expected declaration, found %s", p.tok.Type)
+		switch item := p.parseTopLevel().(type) {
+		case ast.Decl:
+			file.Decls = append(file.Decls, item)
+		case ast.Stmt:
+			file.Stmts = append(file.Stmts, item)
 		}
 		if p.nadv == start {
 			p.next() // skip an unexpected token to make progress
@@ -27,6 +27,17 @@ func (p *Parser) parseFile() *ast.File {
 	}
 	file.Comments = p.comments
 	return file
+}
+
+// parseTopLevel parses a single top-level item: a function declaration or a
+// statement. Allowing statements at file scope is what lets the streaming
+// executor run code as it arrives; Parse collects them in File.Stmts while
+// Items yields them one at a time.
+func (p *Parser) parseTopLevel() ast.Node {
+	if p.tok.Type == token.FUNC {
+		return p.parseFuncDecl()
+	}
+	return p.parseStmt()
 }
 
 // parsePackage parses an optional package clause.

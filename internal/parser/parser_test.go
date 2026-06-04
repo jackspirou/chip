@@ -129,8 +129,8 @@ func TestExprPrecedence(t *testing.T) {
 }
 
 func TestParseErrorsAreReported(t *testing.T) {
-	// A top-level statement is not a declaration; parsing should report an
-	// error rather than panic or hang.
+	// A malformed statement (a := with no right-hand side) should be reported
+	// as an error rather than panic or hang.
 	p, err := New(strings.NewReader("func main() {\n  x :=\n}"))
 	if err != nil {
 		t.Fatalf("New: %v", err)

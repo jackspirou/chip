@@ -26,6 +26,9 @@ func Sprint(n Node) string {
 		for _, d := range n.Decls {
 			b.WriteString("\n  " + Sprint(d))
 		}
+		for _, s := range n.Stmts {
+			b.WriteString("\n  " + Sprint(s))
+		}
 		b.WriteString(")")
 		return b.String()
 
