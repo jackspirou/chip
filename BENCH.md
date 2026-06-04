@@ -73,4 +73,28 @@ optimizations below target.
 
 One commit per change, each with its benchstat delta. Filled in as they land.
 
-_(none yet — baseline only)_
+### 1. `env`: slice of bindings instead of a per-scope map
+
+Every scope was a `map[string]value.Value`. chip's scopes are tiny — a function
+scope holds only its parameters, and most block scopes hold nothing — so a map
+paid a header allocation (and a bucket once populated) per scope for a handful
+of entries. Replacing it with a `[]binding` scanned linearly removes the map
+header on every scope and the bucket on every populated one; an empty block
+scope now costs a single `*env` struct.
+
+vs baseline (`-count=6`, benchstat):
+
+| Benchmark | sec/op | B/op | allocs/op |
+|---|--:|--:|--:|
+| `StreamRun/fib` | −35.0% | −77.8% | −30.0% |
+| `StreamRun/call_overhead` | −41.1% | −76.8% | −33.3% |
+| `StreamRun/loop_scope` | −38.9% | −50.0% | −50.0% |
+| `StreamRun/loop_decl` | −53.4% | −85.4% | −33.3% |
+| `StreamRun/nested_loops` | ~ (noisy) | −51.0% | −49.9% |
+| `StreamRun/array_build` | −35.3% | −51.0% | −24.0% |
+| `StreamRun/mutual_recursion` | −36.1% | −78.6% | −26.1% |
+| `StreamRun/import_math` | −23.6% | −55.2% | −7.1% |
+| **geomean** | **−30.0%** | **−57.8%** | **−25.9%** |
+
+All deltas `p=0.002 (n=6)` except `nested_loops` sec/op (`p=0.065`, a one-sample
+timing outlier; its allocs/op and B/op both show a clean −50%).
