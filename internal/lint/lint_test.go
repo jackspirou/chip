@@ -177,3 +177,18 @@ func main() { print(geometry.Area(3, 4)) }`)
 		t.Fatalf("alias never used should be flagged, got %v", unused)
 	}
 }
+
+// With the batch checker's import awareness (Slice 5), a used import lints clean
+// through the full check+lint path: neither an unused-import hint nor a spurious
+// "undefined" from the qualified call.
+func TestLintUsedImportFullPath(t *testing.T) {
+	issues := lintSrc(t, `package main
+import "geometry"
+func main() { print(geometry.Area(3, 4)) }`)
+	if hasIssue(issues, "imported and not used") {
+		t.Fatalf("a used import should not be flagged, got %v", issues)
+	}
+	if hasIssue(issues, "undefined") {
+		t.Fatalf("the qualified call should not be reported undefined, got %v", issues)
+	}
+}

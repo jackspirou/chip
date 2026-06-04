@@ -13,6 +13,7 @@ const (
 	Param               // a function parameter
 	Func                // a function
 	Builtin             // a predeclared builtin (e.g. print)
+	Pkg                 // an imported package name
 )
 
 // Symbol is a named program entity with a type.

@@ -4,6 +4,7 @@ package check
 
 import (
 	"fmt"
+	"path"
 
 	"github.com/jackspirou/chip/internal/ast"
 	"github.com/jackspirou/chip/internal/scope"
@@ -43,9 +44,46 @@ func Check(file *ast.File) (*Info, error) {
 	c.global = scope.New(c.universe)
 
 	c.collect(file)
+	c.collectImports(file)
 	c.checkFuncs(file)
 
 	return c.info, c.errs.Err()
+}
+
+// collectImports registers each imported package's reference name (its alias,
+// else the last element of the import path) so qualified references resolve.
+//
+// The batch checker has no Loader, so it does not type cross-package members: a
+// package name, and any qualified call through it, is opaque (types.Invalid).
+// This is a deliberate boundary — real package resolution and execution happen
+// on the streaming path (chip run, internal/stream); the batch tooling only
+// needs enough awareness to avoid spurious "undefined" errors so chip lint and
+// chip ast work on programs with imports.
+func (c *Checker) collectImports(file *ast.File) {
+	for _, spec := range file.Imports {
+		name := importRefName(spec)
+		if name == "" || c.global.Lookup(name) != nil {
+			continue
+		}
+		c.global.Insert(&scope.Symbol{
+			Name:    name,
+			Kind:    scope.Pkg,
+			Type:    types.Invalid,
+			DeclPos: spec.Pos(),
+		})
+	}
+}
+
+// importRefName is the name an import binds: its alias if given, else the last
+// element of the import path.
+func importRefName(spec *ast.ImportSpec) string {
+	if spec.Name != nil {
+		return spec.Name.Name
+	}
+	if spec.Path != nil {
+		return path.Base(spec.Path.Value)
+	}
+	return ""
 }
 
 func (c *Checker) defineBuiltins() {

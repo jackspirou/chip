@@ -157,6 +157,72 @@ func TestFmtSortsImportsFile(t *testing.T) {
 	}
 }
 
+// `chip lint` works on a program that imports and uses a package: the qualified
+// call no longer trips the batch checker, so a clean program lints clean.
+func TestLintWorksWithImports(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "p.chp")
+	if err := os.WriteFile(path,
+		[]byte("import \"geometry\"\nfunc main() { print(geometry.Area(3, 4)) }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut bytes.Buffer
+	if err := run([]string{"lint", path}, nil, &out, &errOut); err != nil {
+		t.Fatalf("lint on a program with imports should succeed, got %v (%s)", err, errOut.String())
+	}
+	if errOut.Len() != 0 {
+		t.Fatalf("expected no lint output, got %q", errOut.String())
+	}
+}
+
+// `chip dump` reports a clean, documented boundary on a program with imports
+// (the bytecode compiler does not support packages) — never a panic.
+func TestDumpReportsUnsupportedImports(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "p.chp")
+	if err := os.WriteFile(path,
+		[]byte("import \"geometry\"\nfunc main() { print(geometry.Area(3, 4)) }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut bytes.Buffer
+	if err := run([]string{"dump", path}, nil, &out, &errOut); err == nil {
+		t.Fatal("expected dump to report packages as unsupported")
+	}
+	if !strings.Contains(errOut.String(), "does not support packages") {
+		t.Fatalf("stderr = %q, want a clean unsupported-packages message", errOut.String())
+	}
+}
+
+// `chip dump` still disassembles an ordinary (import-free) program.
+func TestDumpDisassemblesWithoutImports(t *testing.T) {
+	var out, errOut bytes.Buffer
+	if err := run([]string{"dump", "../../examples/gcd.chp"}, nil, &out, &errOut); err != nil {
+		t.Fatalf("dump: %v (%s)", err, errOut.String())
+	}
+	if !strings.Contains(out.String(), "gcd") {
+		t.Fatalf("expected disassembly of gcd, got %q", out.String())
+	}
+}
+
+// `chip ast` prints the syntax tree of a program with imports, including the
+// import spec and the qualified selector — no checker or compiler involved.
+func TestAstPrintsImports(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "p.chp")
+	if err := os.WriteFile(path,
+		[]byte("import \"geometry\"\nfunc main() { print(geometry.Area(3, 4)) }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut bytes.Buffer
+	if err := run([]string{"ast", path}, nil, &out, &errOut); err != nil {
+		t.Fatalf("ast: %v (%s)", err, errOut.String())
+	}
+	got := out.String()
+	if !strings.Contains(got, "(import \"geometry\")") {
+		t.Fatalf("ast output missing import spec:\n%s", got)
+	}
+	if !strings.Contains(got, "(sel geometry Area)") {
+		t.Fatalf("ast output missing qualified selector:\n%s", got)
+	}
+}
+
 // `chip repl` carries definitions across lines: f is defined on one line and
 // called on the next.
 func TestReplPersistsState(t *testing.T) {

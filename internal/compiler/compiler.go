@@ -27,7 +27,16 @@ type Compiler struct {
 }
 
 // Compile translates a type-checked file into a Program.
+//
+// The bytecode compiler and its VM are a single-package artifact: cross-package
+// calls are executed only on the streaming path (chip run). Rather than emit a
+// half-supported program, Compile draws a clean boundary and refuses a file
+// that imports packages — chip dump reports this instead of failing obscurely.
 func Compile(file *ast.File, info *check.Info) (*code.Program, error) {
+	if len(file.Imports) > 0 {
+		return nil, errors.New("the bytecode compiler does not support packages; run the program with `chip run`")
+	}
+
 	c := &Compiler{info: info, funcIdx: make(map[*scope.Symbol]int)}
 
 	var fns []*ast.FuncDecl

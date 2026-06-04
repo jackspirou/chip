@@ -108,3 +108,26 @@ func TestBadOperandTypes(t *testing.T) {
 	wantErr(t, `package main
 func f() { x := 1 + "y" }`, "operator + is not defined")
 }
+
+// An imported package and a qualified call through it check clean: the batch
+// checker treats the package opaquely (no Loader) rather than reporting the
+// package name as undefined, so batch tooling works on programs with imports.
+func TestCheckImportedPackageIsOpaque(t *testing.T) {
+	mustCheck(t, `package main
+import "geometry"
+func main() { print(geometry.Area(3, 4)) }`)
+}
+
+// An aliased import binds the alias; a qualified call through it checks clean.
+func TestCheckImportAliasIsOpaque(t *testing.T) {
+	mustCheck(t, `package main
+import g "geometry"
+func main() { print(g.Area(3, 4)) }`)
+}
+
+// A truly undefined name (not an imported package) is still reported.
+func TestCheckUndefinedStillErrors(t *testing.T) {
+	wantErr(t, `package main
+import "geometry"
+func main() { print(nope.Area(3, 4)) }`, "undefined: nope")
+}
