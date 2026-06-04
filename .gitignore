@@ -8,3 +8,6 @@
 
 # Editor / OS files
 .DS_Store
+
+# Local planning notes (ignore only docs/plans, not the whole docs/ tree)
+docs/plans/
