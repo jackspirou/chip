@@ -21,6 +21,7 @@ import (
 	"github.com/jackspirou/chip/internal/ast"
 	"github.com/jackspirou/chip/internal/parser"
 	"github.com/jackspirou/chip/internal/token"
+	"github.com/jackspirou/chip/internal/types"
 )
 
 // maxCallDepth bounds recursion so runaway recursion fails cleanly instead of
@@ -42,13 +43,16 @@ func Run(src io.Reader, out io.Writer) error {
 // engine is a demand-driven streaming evaluator over a pull iterator of
 // top-level items.
 type engine struct {
-	next    func() (ast.Node, error, bool)
-	stop    func()
-	out     io.Writer
-	funcs   map[string]*ast.FuncDecl // registered function definitions
-	pending []ast.Stmt               // top-level statements awaiting execution (FIFO)
-	global  *env                     // top-level variable bindings
-	depth   int                      // current call depth (recursion guard)
+	next        func() (ast.Node, error, bool)
+	stop        func()
+	out         io.Writer
+	funcs       map[string]*ast.FuncDecl           // registered function definitions
+	sigs        map[*ast.FuncDecl]*types.Signature // memoized function signatures
+	checked     map[*ast.FuncDecl]bool             // bodies already type-checked (D9)
+	pending     []ast.Stmt                         // top-level statements awaiting execution (FIFO)
+	global      *env                               // top-level variable bindings
+	globalTypes *typeEnv                           // top-level variable types (for checking)
+	depth       int                                // current call depth (recursion guard)
 }
 
 func newEngine(src io.Reader, out io.Writer) (*engine, error) {
@@ -58,11 +62,14 @@ func newEngine(src io.Reader, out io.Writer) (*engine, error) {
 	}
 	next, stop := iter.Pull2(p.Items())
 	return &engine{
-		next:   next,
-		stop:   stop,
-		out:    out,
-		funcs:  make(map[string]*ast.FuncDecl),
-		global: newEnv(nil),
+		next:        next,
+		stop:        stop,
+		out:         out,
+		funcs:       make(map[string]*ast.FuncDecl),
+		sigs:        make(map[*ast.FuncDecl]*types.Signature),
+		checked:     make(map[*ast.FuncDecl]bool),
+		global:      newEnv(nil),
+		globalTypes: newTypeEnv(nil),
 	}, nil
 }
 
@@ -84,12 +91,19 @@ func (e *engine) run() error {
 			if perr != nil {
 				return perr
 			}
-			e.register(item)
+			if err := e.register(item); err != nil {
+				return err
+			}
 			continue
 		}
 		stmt := e.pending[0]
 		e.pending = e.pending[1:]
 		ranStmt = true
+		// Type-check the statement just before running it, then trust the
+		// checker (D10) and execute.
+		if err := e.checkTopStmt(stmt); err != nil {
+			return err
+		}
 		if _, _, err := e.execStmt(stmt, e.global); err != nil {
 			return err
 		}
@@ -105,16 +119,22 @@ func (e *engine) run() error {
 	return nil
 }
 
-// register records a function definition or queues a top-level statement.
-func (e *engine) register(item ast.Node) {
+// register records a function definition or queues a top-level statement. A
+// function's signature is recorded first, then its body is type-checked
+// (deferred per §3.1) — pulling in any referenced signatures and memoizing the
+// result (D9) — so a function with a type error is rejected even if nothing
+// calls it.
+func (e *engine) register(item ast.Node) error {
 	switch n := item.(type) {
 	case *ast.FuncDecl:
 		if n.Name != nil {
 			e.funcs[n.Name.Name] = n
 		}
+		return e.checkFuncBody(n)
 	case ast.Stmt:
 		e.pending = append(e.pending, n)
 	}
+	return nil
 }
 
 // resolve returns the function named name, reading ahead in the stream until it
@@ -136,7 +156,9 @@ func (e *engine) resolve(name string) (*ast.FuncDecl, error) {
 		if !ok {
 			return nil, nil // EOF: not found
 		}
-		e.register(item)
+		if err := e.register(item); err != nil {
+			return nil, err
+		}
 		if fn, ok := e.funcs[name]; ok {
 			return fn, nil
 		}
