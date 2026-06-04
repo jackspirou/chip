@@ -50,6 +50,7 @@ func Lint(file *ast.File, info *check.Info) IssueList {
 	l := &linter{info: info}
 	l.checkUnused(file)
 	l.checkFlow(file)
+	l.checkOrder()
 	sort.Slice(l.issues, func(i, j int) bool {
 		a, b := l.issues[i].Pos, l.issues[j].Pos
 		if a.Line != b.Line {
@@ -126,6 +127,28 @@ func collectWritesStmt(s ast.Stmt, writes map[*ast.Ident]bool) {
 	case *ast.Block:
 		collectWrites(s, writes)
 	}
+}
+
+//
+// streamability: functions used before they are defined
+//
+
+// checkOrder flags a function called before its own definition in source order.
+// The forward reference still works (functions resolve by reading ahead) but
+// makes the stream wait; `chip fmt` reorders definitions to remove it.
+func (l *linter) checkOrder() {
+	for id, sym := range l.info.Uses {
+		if sym.Kind == scope.Func && posBefore(id.Pos(), sym.DeclPos) {
+			l.add(id.Pos(), "%s used before its definition", sym.Name)
+		}
+	}
+}
+
+func posBefore(a, b token.Pos) bool {
+	if a.Line != b.Line {
+		return a.Line < b.Line
+	}
+	return a.Column < b.Column
 }
 
 //

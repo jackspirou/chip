@@ -88,10 +88,19 @@ func (p *printer) file(f *ast.File) {
 		p.line("package " + f.Package.Name)
 	}
 	p.imports(f.Imports)
-	for _, d := range f.Decls {
+	// Definitions are hoisted into dependency order for streamability; top-level
+	// statements follow, in their original order (never reordered).
+	for _, d := range orderDecls(f.Decls) {
 		p.blank()
 		p.flush(d.Pos().Line)
 		p.decl(d)
+	}
+	if len(f.Stmts) > 0 {
+		p.blank()
+		for _, s := range f.Stmts {
+			p.flush(s.Pos().Line)
+			p.stmt(s)
+		}
 	}
 }
 

@@ -36,8 +36,8 @@ func hasIssue(issues lint.IssueList, substr string) bool {
 }
 
 func TestLintClean(t *testing.T) {
+	// sum is defined before it is used, so there is no use-before-def hint.
 	issues := lintSrc(t, `package main
-func main() { print(sum([]int{1, 2, 3})) }
 func sum(xs []int) int {
     total := 0
     i := 0
@@ -46,9 +46,21 @@ func sum(xs []int) int {
         i = i + 1
     }
     return total
-}`)
+}
+func main() { print(sum([]int{1, 2, 3})) }`)
 	if len(issues) != 0 {
 		t.Fatalf("expected no issues, got %v", issues)
+	}
+}
+
+func TestLintUseBeforeDef(t *testing.T) {
+	// a calls b, but b is defined after a.
+	issues := lintSrc(t, `package main
+func a() int { return b() }
+func b() int { return 42 }
+func main() { print(a()) }`)
+	if !hasIssue(issues, "b used before its definition") {
+		t.Fatalf("expected use-before-def hint, got %v", issues)
 	}
 }
 

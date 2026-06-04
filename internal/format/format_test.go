@@ -25,12 +25,9 @@ func TestFormatCanonical(t *testing.T) {
 }
 
 func TestFormatIdempotent(t *testing.T) {
+	// Canonical form lists definitions in dependency order (a callee before its
+	// caller), so sum precedes main.
 	src := `package main
-
-func main() {
-    xs := []int{3, 1, 4}
-    print(sum(xs))
-}
 
 func sum(xs []int) int {
     total := 0
@@ -40,6 +37,11 @@ func sum(xs []int) int {
         i = i + 1
     }
     return total
+}
+
+func main() {
+    xs := []int{3, 1, 4}
+    print(sum(xs))
 }
 `
 	once := fmtSrc(t, src)
@@ -71,5 +73,46 @@ func TestFormatPreservesComments(t *testing.T) {
 	got := fmtSrc(t, in)
 	if !strings.Contains(got, "// a greeting program") || !strings.Contains(got, "// say hi") {
 		t.Errorf("comments not preserved:\n%s", got)
+	}
+}
+
+// fmt-for-streamability: a callee used before its definition is hoisted above
+// its caller.
+func TestFormatHoistsDefinitions(t *testing.T) {
+	in := "package main\nfunc a() int { return b() }\nfunc b() int { return 42 }\n"
+	out := fmtSrc(t, in)
+	ai, bi := strings.Index(out, "func a("), strings.Index(out, "func b(")
+	if ai < 0 || bi < 0 {
+		t.Fatalf("both functions should be present:\n%s", out)
+	}
+	if bi > ai {
+		t.Errorf("b should be hoisted above its use in a:\n%s", out)
+	}
+	if twice := fmtSrc(t, out); twice != out {
+		t.Errorf("not idempotent:\nonce:\n%s\ntwice:\n%s", out, twice)
+	}
+}
+
+// A definition is hoisted above a top-level statement that uses it.
+func TestFormatDefAboveStatementUse(t *testing.T) {
+	out := fmtSrc(t, "print(f())\nfunc f() int { return 42 }\n")
+	fi, ui := strings.Index(out, "func f("), strings.Index(out, "print(f())")
+	if fi < 0 || ui < 0 {
+		t.Fatalf("expected both the def and the use:\n%s", out)
+	}
+	if fi > ui {
+		t.Errorf("the definition of f should be above its use:\n%s", out)
+	}
+	if twice := fmtSrc(t, out); twice != out {
+		t.Errorf("not idempotent:\n%s", twice)
+	}
+}
+
+// Top-level statements keep their original order.
+func TestFormatNeverReordersStatements(t *testing.T) {
+	out := fmtSrc(t, "print(1)\nprint(2)\nprint(3)\n")
+	i1, i2, i3 := strings.Index(out, "print(1)"), strings.Index(out, "print(2)"), strings.Index(out, "print(3)")
+	if i1 < 0 || i1 >= i2 || i2 >= i3 {
+		t.Errorf("statements must keep their order:\n%s", out)
 	}
 }
