@@ -5,6 +5,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"unicode"
+	"unicode/utf8"
 )
 
 // Source is one file of a package: its name (for ordering and diagnostics) and
@@ -56,3 +58,12 @@ func (m mapLoader) Load(importPath string) ([]Source, error) {
 // pkgBaseName is the default reference name for an import path: its last path
 // element. It is the fallback when an imported file has no package clause.
 func pkgBaseName(importPath string) string { return path.Base(importPath) }
+
+// isExported reports whether a top-level name is exported — visible across an
+// import — which (Go-style, P3) holds exactly when its first rune is uppercase.
+// Capitalization only matters across an import; within a package every name is
+// visible.
+func isExported(name string) bool {
+	r, _ := utf8.DecodeRuneInString(name)
+	return unicode.IsUpper(r)
+}

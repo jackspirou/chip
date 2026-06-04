@@ -23,6 +23,9 @@ func (e *engine) eval(x ast.Expr, scope *env) (value.Value, error) {
 		if v, ok := scope.lookup(x.Name); ok {
 			return v, nil
 		}
+		if _, ok := e.cur.imports[x.Name]; ok {
+			return value.Value{}, e.errorf(x.Pos(), "%s is a package, not a value", x.Name)
+		}
 		return value.Value{}, e.errorf(x.Pos(), "undefined: %s", x.Name)
 	case *ast.UnaryExpr:
 		return e.evalUnary(x, scope)
@@ -255,6 +258,9 @@ func (e *engine) evalQualifiedCall(x *ast.CallExpr, sel *ast.SelectorExpr, scope
 	fn, ok := p.funcs[sel.Sel.Name]
 	if !ok {
 		return value.Value{}, e.errorf(sel.Sel.Pos(), "undefined: %s.%s", pkgID.Name, sel.Sel.Name)
+	}
+	if !isExported(sel.Sel.Name) {
+		return value.Value{}, e.errorf(sel.Sel.Pos(), "%s is not exported by %s", sel.Sel.Name, pkgID.Name)
 	}
 	args, err := e.evalArgs(x.Args, scope)
 	if err != nil {

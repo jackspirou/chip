@@ -119,6 +119,50 @@ func TestImportCycle(t *testing.T) {
 	}
 }
 
+// PE5 — accessing a package-private (lowercase) member across an import is an
+// error naming the unexported member and its package.
+func TestPE5UnexportedAccess(t *testing.T) {
+	_, err := runPkg(t,
+		"import \"geometry\"\nfunc main() { print(geometry.area(3, 4)) }\n",
+		map[string]string{"geometry": "package geometry\nfunc area(w int, h int) int { return w * h }\n"})
+	if err == nil {
+		t.Fatal("expected an error, got nil")
+	}
+	if got := err.Error(); !strings.Contains(got, "area is not exported by geometry") {
+		t.Fatalf("error = %q, want it to contain %q", got, "area is not exported by geometry")
+	}
+}
+
+// Within a package every name is visible: an exported function may call an
+// unexported one in the same package, and the importer reaches it through the
+// exported wrapper.
+func TestUnexportedCallWithinPackage(t *testing.T) {
+	pkg := "package geometry\nfunc Area(w int, h int) int { return area(w, h) }\nfunc area(w int, h int) int { return w * h }\n"
+	out, err := runPkg(t,
+		"import \"geometry\"\nfunc main() { print(geometry.Area(3, 4)) }\n",
+		map[string]string{"geometry": pkg})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out != "12\n" {
+		t.Fatalf("stdout = %q, want %q", out, "12\n")
+	}
+}
+
+// A bare package name used as a value (not as a qualified call) is rejected,
+// distinctly from an undefined variable.
+func TestBarePackageNameAsValue(t *testing.T) {
+	_, err := runPkg(t,
+		"import \"geometry\"\nfunc main() { x := geometry\nprint(x) }\n",
+		map[string]string{"geometry": geometrySrc})
+	if err == nil {
+		t.Fatal("expected an error, got nil")
+	}
+	if got := err.Error(); !strings.Contains(got, "geometry is a package, not a value") {
+		t.Fatalf("error = %q, want it to contain %q", got, "geometry is a package, not a value")
+	}
+}
+
 // Importing a package that does not exist reports a clear error.
 func TestImportNotFound(t *testing.T) {
 	_, err := runPkg(t,

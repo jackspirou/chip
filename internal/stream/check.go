@@ -303,6 +303,9 @@ func (tc *typeChecker) checkExpr(x ast.Expr, scope *typeEnv) (types.Type, error)
 		if ty, ok := scope.lookup(x.Name); ok {
 			return ty, nil
 		}
+		if _, ok := tc.e.cur.imports[x.Name]; ok {
+			return nil, tc.errorf(x.Pos(), "%s is a package, not a value", x.Name)
+		}
 		return nil, tc.errorf(x.Pos(), "undefined: %s", x.Name)
 	case *ast.UnaryExpr:
 		return tc.checkUnary(x, scope)
@@ -454,6 +457,9 @@ func (tc *typeChecker) checkQualifiedCall(x *ast.CallExpr, sel *ast.SelectorExpr
 	fn, ok := p.funcs[sel.Sel.Name]
 	if !ok {
 		return nil, tc.errorf(sel.Sel.Pos(), "undefined: %s.%s", pkgID.Name, sel.Sel.Name)
+	}
+	if !isExported(sel.Sel.Name) {
+		return nil, tc.errorf(sel.Sel.Pos(), "%s is not exported by %s", sel.Sel.Name, pkgID.Name)
 	}
 	return tc.checkCallSig(x, tc.e.sigOf(fn), scope)
 }
