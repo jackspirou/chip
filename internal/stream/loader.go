@@ -8,6 +8,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/jackspirou/chip/internal/std"
 )
 
 // Source is one file of a package: its name (for ordering and diagnostics) and
@@ -24,6 +26,21 @@ type Loader interface {
 	// Load returns the source files of the package at importPath, ordered by
 	// file name, or an error (e.g. the package was not found).
 	Load(importPath string) ([]Source, error)
+}
+
+// stdLoader resolves chip's built-in standard-library packages (written in chip
+// and bundled into the binary) ahead of the filesystem: import "math" always
+// finds the built-in package, Go-style, and is never shadowed by a local
+// directory of the same import path. Any path the standard library does not
+// provide falls through to the wrapped user loader. The engine wraps every
+// loader with one of these (newEngine), so all run paths see the stdlib.
+type stdLoader struct{ user Loader }
+
+func (s stdLoader) Load(importPath string) ([]Source, error) {
+	if src, ok := std.Package(importPath); ok {
+		return []Source{{Name: path.Base(importPath) + ".chp", Data: []byte(src)}}, nil
+	}
+	return s.user.Load(importPath)
 }
 
 // DirLoader returns a Loader that reads packages from the filesystem rooted at

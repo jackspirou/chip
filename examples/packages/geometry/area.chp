@@ -1,0 +1,8 @@
+// The geometry package, split across two files (area.chp and scale.chp). Area
+// is exported (capitalized) and calls the package-private helper scale defined
+// in the sibling file — within a package every name is visible.
+package geometry
+
+func Area(w int, h int) int {
+    return scale(w * h)
+}

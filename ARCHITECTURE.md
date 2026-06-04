@@ -68,7 +68,7 @@ it item by item.
 | `internal/compiler` | `*ast.File` + `check.Info` → bytecode (batch path) |
 | `internal/vm` | stack VM that executes bytecode (batch path) |
 | **`internal/stream`** | **the streaming evaluator — chip's default runtime** |
-| `internal/std` | the standard library, written in chip and embedded |
+| `internal/std` | the standard library, written in chip and embedded (the flat prelude + importable packages like `math`) |
 | `cmd/chip` | the CLI (`run`, `repl`, `fmt`, `lint`, `dump`, `ast`) |
 | `chip` (root) | the embeddable Go API (`Run`, `Compile`, `Format`, `Lint`) |
 
@@ -136,6 +136,46 @@ calls**. That single property gives three things for free:
   on one line are available on the next.
 - the standard library is just another source, fed first (see below).
 
+## Packages
+
+A program can grow from one file into many via a small, Go-style package system.
+The guiding rule keeps streaming intact:
+
+> **Stream within a package, load across packages.**
+
+- A **package** is a directory of `.chp` files that all declare the same
+  `package NAME`. You `import "path"` and refer to members by name; an alias
+  (`import g "path"`) rebinds the reference name. A top-level name is **exported**
+  iff its first letter is uppercase (Go-style, no new syntax).
+- The **entry package** (the file you run) still *streams* — intra-package
+  forward references resolve by reading ahead, exactly as before. A single-file
+  program is an implicit `main` package and runs unchanged.
+- An **imported package loads eagerly and as a unit**: every file is parsed, all
+  top-level signatures are registered, then every body is checked
+  (collect-then-check, so cross-file references inside the package resolve). This
+  is bounded to one dependency — *not* a whole-program gate. A package loads **at
+  most once** (cached by import path) and **import cycles are detected** and
+  reported (`import cycle: a -> b -> a`).
+- The engine's single flat namespace becomes **one table per package** (`pkg`):
+  its functions, globals, and resolved imports. Resolution is always relative to
+  a *current* package: an **unqualified** name resolves current package → flat
+  prelude → builtins (`print`/`len`); a **qualified** `pkg.Member` resolves in
+  the named import and must be exported.
+- Imports reach the filesystem through a small **`Loader` seam** (`internal/stream/loader.go`):
+  a `DirLoader` rooted at the entry file's directory, plus an in-memory
+  `MapLoader` that keeps package tests hermetic. Built-in stdlib packages
+  (`import "math"`) are served by a `stdLoader` that resolves them *ahead of* the
+  filesystem, so they are never shadowed by a local directory of the same path.
+
+The streaming type checker and the executor each dispatch a call by the shape of
+its callee — a bare name (`checkIdentCall`/`evalIdentCall`) or a qualified
+`pkg.Member` (`checkQualifiedCall`/`evalQualifiedCall`) — and the qualified path
+applies the export check. The batch tooling (`chip lint`/`dump`/`ast`) treats a
+package opaquely rather than resolving it: there is no `Loader` on the batch
+path, so a `pkg.Fn(...)` type-checks as opaque and `chip dump` reports packages
+as unsupported (the bytecode VM is single-package); the streaming run is the
+source of truth for cross-package execution.
+
 ## Incremental type checking
 
 `internal/stream/check.go` is a fail-fast, incremental checker. It reuses the
@@ -173,11 +213,17 @@ stable and idempotent), and `internal/lint` emits a *use-before-def* hint that
 
 chip keeps only `print` and `len` built into the language. Everything else is
 intended to live in `internal/std`, **written in chip itself** and embedded into
-the binary. The engine feeds this prelude before user code, so its functions
-(currently `abs`, `min`, `max`) are available to every program — a direct payoff
-of the persistent, source-agnostic engine. The guiding rule: grow the library in
-chip; add a new built-in only when a primitive genuinely cannot be expressed in
-chip.
+the binary. The library has two shapes:
+
+- a **flat prelude** (currently `abs`, `min`, `max`) the engine feeds before user
+  code, so its functions are available *unqualified* to every program — a direct
+  payoff of the persistent, source-agnostic engine; and
+- **importable packages** (currently `math`) you bring in explicitly with
+  `import "math"` and call qualified (`math.Gcd`). These resolve ahead of the
+  filesystem, so a built-in is never shadowed by a local directory.
+
+The guiding rule: grow the library in chip; add a new built-in only when a
+primitive genuinely cannot be expressed in chip.
 
 > Note: the prelude is loaded on the streaming *run* path (`chip run`, `chip
 > repl`, `chip.Run`). The batch tooling (`chip lint`, `chip dump`) does not yet

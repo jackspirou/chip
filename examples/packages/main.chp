@@ -1,0 +1,12 @@
+// A multi-file program. This entry file imports a local two-file package
+// (geometry, in ./geometry) and the built-in standard-library package (math),
+// then calls an exported function from each.
+import (
+    "geometry"
+    "math"
+)
+
+func main() {
+    print(geometry.Area(3, 4))   // 12
+    print(math.Gcd(252, 105))    // 21
+}

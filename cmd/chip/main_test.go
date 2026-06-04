@@ -84,6 +84,19 @@ func TestRunMultiFileDirPackage(t *testing.T) {
 	}
 }
 
+// `chip run` executes the multi-file packages example: an entry program that
+// imports a local two-file geometry package (resolved relative to the file) and
+// the built-in math package, printing 12 then 21 (Slice 6).
+func TestRunPackagesExample(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if err := run([]string{"run", "../../examples/packages/main.chp"}, nil, &stdout, &stderr); err != nil {
+		t.Fatalf("run: %v (stderr: %s)", err, stderr.String())
+	}
+	if got := stdout.String(); got != "12\n21\n" {
+		t.Fatalf("stdout = %q, want %q", got, "12\n21\n")
+	}
+}
+
 // `chip fmt --check` fails on unformatted source and passes once it is
 // formatted.
 func TestFmtCheck(t *testing.T) {

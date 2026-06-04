@@ -146,8 +146,10 @@ type engine struct {
 
 func newEngine(out io.Writer, loader Loader) *engine {
 	e := &engine{
-		out:     out,
-		loader:  loader,
+		out: out,
+		// Resolve chip's built-in stdlib packages ahead of the given loader, so
+		// import "math" works on every run path (files, embedding, REPL, tests).
+		loader:  stdLoader{user: loader},
 		sigs:    make(map[*ast.FuncDecl]*types.Signature),
 		checked: make(map[*ast.FuncDecl]bool),
 		entry:   newPkg("main"),

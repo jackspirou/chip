@@ -1,0 +1,36 @@
+// The math package: small integer helpers, written in chip.
+//
+// It is a built-in standard-library package. Import it with `import "math"` and
+// call its exported (capitalized) members: math.Gcd, math.Clamp, math.Pow.
+
+package math
+
+// Gcd returns the greatest common divisor of a and b (Euclid's algorithm).
+func Gcd(a int, b int) int {
+    if b == 0 {
+        return a
+    }
+    return Gcd(b, a % b)
+}
+
+// Clamp constrains n to the range [lo, hi].
+func Clamp(n int, lo int, hi int) int {
+    if n < lo {
+        return lo
+    }
+    if n > hi {
+        return hi
+    }
+    return n
+}
+
+// Pow returns base raised to a non-negative integer exponent.
+func Pow(base int, exp int) int {
+    result := 1
+    i := 0
+    for i < exp {
+        result = result * base
+        i = i + 1
+    }
+    return result
+}

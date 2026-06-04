@@ -11,3 +11,24 @@ import _ "embed"
 //
 //go:embed prelude.chp
 var Prelude string
+
+//go:embed math.chp
+var mathSrc string
+
+// packages holds chip's built-in library packages — written in chip and
+// resolved by import path. Unlike the flat prelude (loaded unqualified into
+// every program), these are imported explicitly (e.g. import "math") and their
+// exported members are called qualified (math.Gcd). They are single-file for
+// now.
+var packages = map[string]string{
+	"math": mathSrc,
+}
+
+// Package returns the chip source of the built-in package at importPath and
+// reports whether one exists. The streaming loader consults this ahead of the
+// filesystem, so a built-in package is never shadowed by a local directory of
+// the same import path (Go-style).
+func Package(importPath string) (string, bool) {
+	src, ok := packages[importPath]
+	return src, ok
+}

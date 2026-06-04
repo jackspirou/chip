@@ -1,0 +1,7 @@
+package geometry
+
+// scale is package-private (lowercase): visible within geometry, but not to
+// code that imports the package.
+func scale(n int) int {
+    return n
+}

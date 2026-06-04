@@ -217,6 +217,50 @@ func TestBarePackageNameAsValue(t *testing.T) {
 	}
 }
 
+// PE9 — a built-in standard-library package. import "math" resolves to the
+// bundled math package (ahead of the filesystem, served by the engine's
+// stdLoader), so math.Gcd(252, 105) is 21 with no package on disk.
+func TestPE9StdlibMath(t *testing.T) {
+	out, err := runPkg(t,
+		"import \"math\"\nfunc main() { print(math.Gcd(252, 105)) }\n",
+		nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out != "21\n" {
+		t.Fatalf("stdout = %q, want %q", out, "21\n")
+	}
+}
+
+// The math package's other exported helpers (Clamp, Pow) are reachable through
+// import "math" too.
+func TestStdlibMathClampAndPow(t *testing.T) {
+	out, err := runPkg(t,
+		"import \"math\"\nfunc main() {\n\tprint(math.Clamp(9, 0, 5))\n\tprint(math.Clamp(-3, 0, 5))\n\tprint(math.Pow(2, 10))\n}\n",
+		nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out != "5\n0\n1024\n" {
+		t.Fatalf("stdout = %q, want %q", out, "5\n0\n1024\n")
+	}
+}
+
+// A built-in package resolves ahead of a local directory of the same import
+// path: import "math" finds the bundled math even when the user loader also
+// defines "math" (Go-style — the stdlib is not shadowed).
+func TestStdlibMathNotShadowed(t *testing.T) {
+	out, err := runPkg(t,
+		"import \"math\"\nfunc main() { print(math.Gcd(252, 105)) }\n",
+		map[string]string{"math": "package math\nfunc Gcd(a int, b int) int { return 0 }\n"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out != "21\n" {
+		t.Fatalf("stdout = %q, want %q (built-in math should win)", out, "21\n")
+	}
+}
+
 // Importing a package that does not exist reports a clear error.
 func TestImportNotFound(t *testing.T) {
 	_, err := runPkg(t,

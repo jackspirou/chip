@@ -27,9 +27,14 @@ func main() {
 - **Minimal, Go-like syntax.** `func`, `:=`, `if`, `for`, and little else.
 - **Strongly typed, incrementally.** Type checking is woven into the stream,
   not run as a separate pass.
+- **Packages, Go-style.** A package is a directory of `.chp` files; `import` it
+  by path and call `pkg.Member`. Capitalized names are exported; the entry file
+  still streams while imported packages load eagerly
+  ([example](examples/packages/main.chp)).
 - **Pure Go.** No cgo, no codegen backend — embed it as a library or use the CLI.
 - **A standard library written in chip.** Only `print` and `len` are built in;
-  the rest grows in chip.
+  the rest grows in chip — including importable packages like `math`
+  (`import "math"`, then `math.Gcd(252, 105)`).
 
 ## Install
 
