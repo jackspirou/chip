@@ -1,0 +1,110 @@
+package lint_test
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/jackspirou/chip/internal/check"
+	"github.com/jackspirou/chip/internal/lint"
+	"github.com/jackspirou/chip/internal/parser"
+)
+
+func lintSrc(t *testing.T, src string) lint.IssueList {
+	t.Helper()
+	p, err := parser.New(strings.NewReader(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := p.Parse()
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	info, err := check.Check(f)
+	if err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	return lint.Lint(f, info)
+}
+
+func hasIssue(issues lint.IssueList, substr string) bool {
+	for _, i := range issues {
+		if strings.Contains(i.Msg, substr) {
+			return true
+		}
+	}
+	return false
+}
+
+func TestLintClean(t *testing.T) {
+	issues := lintSrc(t, `package main
+func main() { print(sum([]int{1, 2, 3})) }
+func sum(xs []int) int {
+    total := 0
+    i := 0
+    for i < len(xs) {
+        total = total + xs[i]
+        i = i + 1
+    }
+    return total
+}`)
+	if len(issues) != 0 {
+		t.Fatalf("expected no issues, got %v", issues)
+	}
+}
+
+func TestLintUnusedVar(t *testing.T) {
+	issues := lintSrc(t, `package main
+func main() {
+    x := 1
+    print(2)
+}`)
+	if !hasIssue(issues, "x declared and not used") {
+		t.Fatalf("expected unused var, got %v", issues)
+	}
+}
+
+func TestLintWriteOnlyVar(t *testing.T) {
+	issues := lintSrc(t, `package main
+func main() {
+    x := 1
+    x = 2
+    print(3)
+}`)
+	if !hasIssue(issues, "x declared and not used") {
+		t.Fatalf("expected write-only var flagged, got %v", issues)
+	}
+}
+
+func TestLintUnusedFunc(t *testing.T) {
+	issues := lintSrc(t, `package main
+func main() { print(1) }
+func helper() int { return 2 }`)
+	if !hasIssue(issues, "function helper is never used") {
+		t.Fatalf("expected unused func, got %v", issues)
+	}
+}
+
+func TestLintMissingReturn(t *testing.T) {
+	issues := lintSrc(t, `package main
+func main() { print(f(0)) }
+func f(x int) int {
+    if x == 0 {
+        return 1
+    }
+}`)
+	if !hasIssue(issues, "missing return") {
+		t.Fatalf("expected missing return, got %v", issues)
+	}
+}
+
+func TestLintUnreachable(t *testing.T) {
+	issues := lintSrc(t, `package main
+func main() { print(f()) }
+func f() int {
+    return 1
+    return 2
+}`)
+	if !hasIssue(issues, "unreachable code") {
+		t.Fatalf("expected unreachable code, got %v", issues)
+	}
+}

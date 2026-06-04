@@ -1,4 +1,4 @@
-chip [![GoDoc](http://godoc.org/github.com/jackspirou/chip?status.png)](http://godoc.org/github.com/jackspirou/chip) [![Build Status](https://travis-ci.org/jackspirou/chip.svg?branch=master)](https://travis-ci.org/jackspirou/chip) [![Go Report Card](http://goreportcard.com/badge/jackspirou/chip)](http://goreportcard.com/report/jackspirou/chip)
+chip [![CI](https://github.com/jackspirou/chip/actions/workflows/ci.yml/badge.svg)](https://github.com/jackspirou/chip/actions/workflows/ci.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/jackspirou/chip.svg)](https://pkg.go.dev/github.com/jackspirou/chip) [![Go Report Card](https://goreportcard.com/badge/github.com/jackspirou/chip)](https://goreportcard.com/report/github.com/jackspirou/chip) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ====
 Chip is a toy systems scripting language.
 

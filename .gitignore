@@ -1,2 +1,10 @@
+# Compiled binaries
+/chip
+*.exe
+
+# Test and coverage output
+*.test
+*.out
+
+# Editor / OS files
 .DS_Store
-chip

@@ -1,0 +1,14 @@
+# golangci-lint v2 configuration — https://golangci-lint.run/docs/configuration/file/
+version: "2"
+
+linters:
+  # The "standard" set: errcheck, govet, ineffassign, staticcheck, unused.
+  default: standard
+  exclusions:
+    presets:
+      # Don't flag unchecked errors on fmt.Fprint*/os.*.Write and similar.
+      - std-error-handling
+
+formatters:
+  enable:
+    - gofumpt
