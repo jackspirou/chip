@@ -26,6 +26,23 @@ func lintSrc(t *testing.T, src string) lint.IssueList {
 	return lint.Lint(f, info)
 }
 
+// lintNoCheck parses and lints src directly with empty type info, bypassing the
+// batch type checker. It is for programs the batch checker cannot yet handle —
+// a used import resolves to a qualified call the checker rejects (Slice 5) — so
+// the purely syntactic checks (e.g. unused imports) can still be exercised.
+func lintNoCheck(t *testing.T, src string) lint.IssueList {
+	t.Helper()
+	p, err := parser.New(strings.NewReader(src))
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := p.Parse()
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	return lint.Lint(f, &check.Info{})
+}
+
 func hasIssue(issues lint.IssueList, substr string) bool {
 	for _, i := range issues {
 		if strings.Contains(i.Msg, substr) {
@@ -118,5 +135,45 @@ func f() int {
 }`)
 	if !hasIssue(issues, "unreachable code") {
 		t.Fatalf("expected unreachable code, got %v", issues)
+	}
+}
+
+// PE8 — an imported package that is never referenced is reported. The unused
+// import type-checks clean (the checker ignores imports and there is no
+// qualified call), so the normal lint path reaches it.
+func TestLintUnusedImport(t *testing.T) {
+	issues := lintSrc(t, `package main
+import "geometry"
+func main() { print(1) }`)
+	if !hasIssue(issues, "imported and not used") {
+		t.Fatalf("expected unused-import hint, got %v", issues)
+	}
+}
+
+// An import referenced as a qualifier (pkg.Fn) is not flagged. The qualified
+// call defeats the batch checker (Slice 5), so this lints the tree directly.
+func TestLintUsedImportNotFlagged(t *testing.T) {
+	issues := lintNoCheck(t, `package main
+import "geometry"
+func main() { print(geometry.Area(3, 4)) }`)
+	if hasIssue(issues, "imported and not used") {
+		t.Fatalf("a used import should not be flagged, got %v", issues)
+	}
+}
+
+// An aliased import is judged by its alias: using the alias clears it, and the
+// original path's base name does not.
+func TestLintUnusedImportAlias(t *testing.T) {
+	used := lintNoCheck(t, `package main
+import g "geometry"
+func main() { print(g.Area(3, 4)) }`)
+	if hasIssue(used, "imported and not used") {
+		t.Fatalf("alias used as qualifier should not be flagged, got %v", used)
+	}
+	unused := lintNoCheck(t, `package main
+import g "geometry"
+func main() { print(geometry.Area(3, 4)) }`)
+	if !hasIssue(unused, "imported and not used") {
+		t.Fatalf("alias never used should be flagged, got %v", unused)
 	}
 }

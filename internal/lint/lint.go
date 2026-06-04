@@ -5,6 +5,7 @@ package lint
 
 import (
 	"fmt"
+	"path"
 	"sort"
 
 	"github.com/jackspirou/chip/internal/ast"
@@ -49,6 +50,7 @@ func (l IssueList) Err() error {
 func Lint(file *ast.File, info *check.Info) IssueList {
 	l := &linter{info: info}
 	l.checkUnused(file)
+	l.checkUnusedImports(file)
 	l.checkFlow(file)
 	l.checkOrder()
 	sort.Slice(l.issues, func(i, j int) bool {
@@ -126,6 +128,112 @@ func collectWritesStmt(s ast.Stmt, writes map[*ast.Ident]bool) {
 		collectWrites(s.Body, writes)
 	case *ast.Block:
 		collectWrites(s, writes)
+	}
+}
+
+//
+// unused imports
+//
+
+// checkUnusedImports flags an import whose package is never referenced as a
+// qualifier (pkg.Fn — the only place a package name may appear, P7). The
+// reference name is the alias when present, else the last element of the import
+// path (P6). This is a purely syntactic check over the tree, independent of the
+// type checker (which does not yet resolve qualified calls — Slice 5).
+func (l *linter) checkUnusedImports(file *ast.File) {
+	if len(file.Imports) == 0 {
+		return
+	}
+	used := map[string]bool{}
+	for _, d := range file.Decls {
+		if fn, ok := d.(*ast.FuncDecl); ok {
+			collectQualifiers(fn.Body, used)
+		}
+	}
+	for _, s := range file.Stmts {
+		collectQualifiersStmt(s, used)
+	}
+	for _, spec := range file.Imports {
+		if name := importRefName(spec); name == "" || used[name] {
+			continue
+		}
+		if spec.Path != nil {
+			l.add(spec.Pos(), "%q imported and not used", spec.Path.Value)
+		}
+	}
+}
+
+// importRefName is the name an import binds: its alias if given, else the last
+// element of the import path.
+func importRefName(s *ast.ImportSpec) string {
+	if s.Name != nil {
+		return s.Name.Name
+	}
+	if s.Path != nil {
+		return path.Base(s.Path.Value)
+	}
+	return ""
+}
+
+// collectQualifiers records the base identifier of every selector (the pkg in
+// pkg.Fn) reachable from a block, so unused imports can be told from used ones.
+func collectQualifiers(b *ast.Block, used map[string]bool) {
+	if b == nil {
+		return
+	}
+	for _, s := range b.List {
+		collectQualifiersStmt(s, used)
+	}
+}
+
+func collectQualifiersStmt(s ast.Stmt, used map[string]bool) {
+	switch s := s.(type) {
+	case *ast.DeclStmt:
+		collectQualifiersExpr(s.Value, used)
+	case *ast.AssignStmt:
+		collectQualifiersExpr(s.Lhs, used)
+		collectQualifiersExpr(s.Rhs, used)
+	case *ast.ExprStmt:
+		collectQualifiersExpr(s.X, used)
+	case *ast.ReturnStmt:
+		collectQualifiersExpr(s.Result, used)
+	case *ast.IfStmt:
+		collectQualifiersExpr(s.Cond, used)
+		collectQualifiers(s.Body, used)
+		collectQualifiersStmt(s.Else, used)
+	case *ast.ForStmt:
+		collectQualifiersExpr(s.Cond, used)
+		collectQualifiers(s.Body, used)
+	case *ast.Block:
+		collectQualifiers(s, used)
+	}
+}
+
+func collectQualifiersExpr(e ast.Expr, used map[string]bool) {
+	switch e := e.(type) {
+	case *ast.SelectorExpr:
+		if id, ok := e.X.(*ast.Ident); ok {
+			used[id.Name] = true
+		} else {
+			collectQualifiersExpr(e.X, used)
+		}
+	case *ast.CallExpr:
+		collectQualifiersExpr(e.Fn, used)
+		for _, a := range e.Args {
+			collectQualifiersExpr(a, used)
+		}
+	case *ast.UnaryExpr:
+		collectQualifiersExpr(e.X, used)
+	case *ast.BinaryExpr:
+		collectQualifiersExpr(e.Left, used)
+		collectQualifiersExpr(e.Right, used)
+	case *ast.IndexExpr:
+		collectQualifiersExpr(e.X, used)
+		collectQualifiersExpr(e.Index, used)
+	case *ast.CompositeLit:
+		for _, el := range e.Elems {
+			collectQualifiersExpr(el, used)
+		}
 	}
 }
 

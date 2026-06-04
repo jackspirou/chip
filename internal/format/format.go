@@ -3,6 +3,7 @@ package format
 
 import (
 	"bytes"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -105,6 +106,7 @@ func (p *printer) file(f *ast.File) {
 }
 
 func (p *printer) imports(specs []*ast.ImportSpec) {
+	specs = canonicalImports(specs)
 	if len(specs) == 0 {
 		return
 	}
@@ -120,6 +122,43 @@ func (p *printer) imports(specs []*ast.ImportSpec) {
 	}
 	p.indent--
 	p.line(")")
+}
+
+// canonicalImports returns specs sorted by import path (ties broken by the
+// optional alias) with exact duplicates — same path and same alias — removed.
+// Sorting and dedup are deterministic, so re-formatting canonical output is a
+// no-op, which keeps `chip fmt` idempotent on imports.
+func canonicalImports(specs []*ast.ImportSpec) []*ast.ImportSpec {
+	sorted := make([]*ast.ImportSpec, len(specs))
+	copy(sorted, specs)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		if pi, pj := specPath(sorted[i]), specPath(sorted[j]); pi != pj {
+			return pi < pj
+		}
+		return specAlias(sorted[i]) < specAlias(sorted[j])
+	})
+	var out []*ast.ImportSpec
+	for _, s := range sorted {
+		if n := len(out); n > 0 && specPath(out[n-1]) == specPath(s) && specAlias(out[n-1]) == specAlias(s) {
+			continue
+		}
+		out = append(out, s)
+	}
+	return out
+}
+
+func specPath(s *ast.ImportSpec) string {
+	if s.Path != nil {
+		return s.Path.Value
+	}
+	return ""
+}
+
+func specAlias(s *ast.ImportSpec) string {
+	if s.Name != nil {
+		return s.Name.Name
+	}
+	return ""
 }
 
 func importSpecString(s *ast.ImportSpec) string {

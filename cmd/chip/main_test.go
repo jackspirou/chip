@@ -110,6 +110,53 @@ func TestFmtCheck(t *testing.T) {
 	}
 }
 
+// `chip lint` reports an unused import (PE8) over a real file.
+func TestLintReportsUnusedImport(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "p.chp")
+	if err := os.WriteFile(path, []byte("import \"geometry\"\nfunc main() { print(1) }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut bytes.Buffer
+	if err := run([]string{"lint", path}, nil, &out, &errOut); err == nil {
+		t.Fatal("expected lint to report the unused import")
+	}
+	if !strings.Contains(errOut.String(), "imported and not used") {
+		t.Fatalf("stderr = %q, want an unused-import hint", errOut.String())
+	}
+}
+
+// `chip fmt` sorts and dedupes an import block and is idempotent on a real file.
+func TestFmtSortsImportsFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "p.chp")
+	if err := os.WriteFile(path,
+		[]byte("import (\n\"sort\"\n\"fmt\"\n\"fmt\"\n)\nfunc main() { print(1) }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var out, errOut bytes.Buffer
+	if err := run([]string{"fmt", "-w", path}, nil, &out, &errOut); err != nil {
+		t.Fatalf("fmt -w: %v (%s)", err, errOut.String())
+	}
+
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.Count(string(got), "\"fmt\""); n != 1 {
+		t.Fatalf("duplicate import not removed, %d copies of \"fmt\":\n%s", n, got)
+	}
+	if strings.Index(string(got), "\"fmt\"") > strings.Index(string(got), "\"sort\"") {
+		t.Fatalf("imports not sorted (fmt should precede sort):\n%s", got)
+	}
+
+	// Already canonical: --check passes.
+	out.Reset()
+	errOut.Reset()
+	if err := run([]string{"fmt", "--check", path}, nil, &out, &errOut); err != nil {
+		t.Fatalf("expected --check to pass after formatting, got %v (%s)", err, errOut.String())
+	}
+}
+
 // `chip repl` carries definitions across lines: f is defined on one line and
 // called on the next.
 func TestReplPersistsState(t *testing.T) {

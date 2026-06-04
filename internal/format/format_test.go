@@ -116,3 +116,44 @@ func TestFormatNeverReordersStatements(t *testing.T) {
 		t.Errorf("statements must keep their order:\n%s", out)
 	}
 }
+
+// chip fmt canonicalizes the import block: sorted by path and deduplicated, and
+// the result is stable under re-formatting (idempotent).
+func TestFormatCanonicalizesImports(t *testing.T) {
+	out := fmtSrc(t, "package main\nimport (\n    \"sort\"\n    \"fmt\"\n    \"fmt\"\n)\nfunc main() {}\n")
+	fmtAt, sortAt := strings.Index(out, "\"fmt\""), strings.Index(out, "\"sort\"")
+	if fmtAt < 0 || sortAt < 0 {
+		t.Fatalf("both imports should be present:\n%s", out)
+	}
+	if fmtAt > sortAt {
+		t.Errorf("imports should be sorted (fmt before sort):\n%s", out)
+	}
+	if n := strings.Count(out, "\"fmt\""); n != 1 {
+		t.Errorf("the duplicate import should be removed, found %d copies of \"fmt\":\n%s", n, out)
+	}
+	if twice := fmtSrc(t, out); twice != out {
+		t.Errorf("import formatting is not idempotent:\nonce:\n%s\ntwice:\n%s", out, twice)
+	}
+}
+
+// A lone import (after dedup) collapses to a single line, never a group.
+func TestFormatSingleImportOneLine(t *testing.T) {
+	out := fmtSrc(t, "package main\nimport (\n    \"fmt\"\n    \"fmt\"\n)\nfunc main() {}\n")
+	if !strings.Contains(out, "import \"fmt\"\n") {
+		t.Errorf("a single (deduped) import should be a one-liner:\n%s", out)
+	}
+	if strings.Contains(out, "import (") {
+		t.Errorf("a single import should not use a group:\n%s", out)
+	}
+}
+
+// An import alias is preserved and orders after a bare import of the same path.
+func TestFormatPreservesImportAlias(t *testing.T) {
+	out := fmtSrc(t, "package main\nimport g \"geometry\"\nfunc main() { print(g.Area(3, 4)) }\n")
+	if !strings.Contains(out, "import g \"geometry\"") {
+		t.Errorf("alias should be preserved:\n%s", out)
+	}
+	if twice := fmtSrc(t, out); twice != out {
+		t.Errorf("aliased import not idempotent:\nonce:\n%s\ntwice:\n%s", out, twice)
+	}
+}
