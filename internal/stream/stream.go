@@ -320,15 +320,21 @@ func (e *engine) load(importPath string) (*pkg, error) {
 	}()
 
 	// Collect: parse every file, set the package name, load its imports, and
-	// register all top-level signatures before any body is checked.
+	// register all top-level signatures before any body is checked. Every file
+	// that names a package must agree (a multi-file package is one package).
 	var order []*ast.FuncDecl
+	declared := ""
 	for _, s := range srcs {
 		f, perr := parseSource(s.Data)
 		if perr != nil {
 			return nil, perr
 		}
 		if f.Package != nil {
-			p.name = f.Package.Name
+			if declared != "" && f.Package.Name != declared {
+				return nil, TypeError{Pos: f.Package.Pos(), Msg: fmt.Sprintf("package name mismatch: %s declares package %s, want %s", s.Name, f.Package.Name, declared)}
+			}
+			declared = f.Package.Name
+			p.name = declared
 		}
 		if len(f.Stmts) > 0 {
 			return nil, TypeError{Pos: f.Stmts[0].Pos(), Msg: fmt.Sprintf("top-level statements are not allowed in imported package %q", p.name)}

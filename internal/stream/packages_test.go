@@ -103,8 +103,9 @@ func TestImportedPackageUsesPrelude(t *testing.T) {
 	}
 }
 
-// An import cycle is detected during eager loading and reported.
-func TestImportCycle(t *testing.T) {
+// PE7 — an import cycle is detected during eager loading and reported, naming
+// the path back to the offending package.
+func TestPE7ImportCycle(t *testing.T) {
 	_, err := runPkg(t,
 		"import \"a\"\nfunc main() { print(a.A()) }\n",
 		map[string]string{
@@ -114,8 +115,61 @@ func TestImportCycle(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error, got nil")
 	}
-	if got := err.Error(); !strings.Contains(got, "import cycle") {
-		t.Fatalf("error = %q, want it to contain %q", got, "import cycle")
+	if got := err.Error(); !strings.Contains(got, "import cycle: a -> b -> a") {
+		t.Fatalf("error = %q, want it to contain %q", got, "import cycle: a -> b -> a")
+	}
+}
+
+// PE6 — a package spread over two files loads as a unit: a function in one file
+// calls a function in the other (collect-then-check resolves the cross-file
+// reference), and the importer runs it.
+func TestPE6MultiFilePackage(t *testing.T) {
+	m := map[string][]Source{
+		"geometry": {
+			{Name: "area.chp", Data: []byte("package geometry\nfunc Area(w int, h int) int { return scale(w * h) }\n")},
+			{Name: "scale.chp", Data: []byte("package geometry\nfunc scale(n int) int { return n }\n")},
+		},
+	}
+	var out bytes.Buffer
+	src := "import \"geometry\"\nfunc main() { print(geometry.Area(3, 4)) }\n"
+	if err := RunWithLoader(strings.NewReader(src), &out, MapLoader(m)); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := out.String(); got != "12\n" {
+		t.Fatalf("stdout = %q, want %q", got, "12\n")
+	}
+}
+
+// Files of one package must agree on the package name.
+func TestPackageNameMismatch(t *testing.T) {
+	m := map[string][]Source{
+		"geometry": {
+			{Name: "a.chp", Data: []byte("package geometry\nfunc A() int { return 1 }\n")},
+			{Name: "b.chp", Data: []byte("package geom\nfunc B() int { return 2 }\n")},
+		},
+	}
+	var out bytes.Buffer
+	src := "import \"geometry\"\nfunc main() { print(geometry.A()) }\n"
+	err := RunWithLoader(strings.NewReader(src), &out, MapLoader(m))
+	if err == nil {
+		t.Fatal("expected an error, got nil")
+	}
+	if got := err.Error(); !strings.Contains(got, "package name mismatch") {
+		t.Fatalf("error = %q, want it to contain %q", got, "package name mismatch")
+	}
+}
+
+// A subpath import refers by the declared package name: import "lib/geometry"
+// (declaring package geometry) is referred to as geometry.
+func TestSubpathImport(t *testing.T) {
+	out, err := runPkg(t,
+		"import \"lib/geometry\"\nfunc main() { print(geometry.Area(3, 4)) }\n",
+		map[string]string{"lib/geometry": geometrySrc})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if out != "12\n" {
+		t.Fatalf("stdout = %q, want %q", out, "12\n")
 	}
 }
 

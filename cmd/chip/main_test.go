@@ -53,6 +53,37 @@ func TestRunImportsRelativeToFile(t *testing.T) {
 	}
 }
 
+// `chip run main.chp` loads a directory package (geometry/ with two files) from
+// the real filesystem and runs the cross-file call (PE6 over the FS).
+func TestRunMultiFileDirPackage(t *testing.T) {
+	dir := t.TempDir()
+	pkgDir := filepath.Join(dir, "geometry")
+	if err := os.MkdirAll(pkgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(pkgDir, "area.chp"),
+		[]byte("package geometry\nfunc Area(w int, h int) int { return scale(w * h) }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(pkgDir, "scale.chp"),
+		[]byte("package geometry\nfunc scale(n int) int { return n }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	mainPath := filepath.Join(dir, "main.chp")
+	if err := os.WriteFile(mainPath,
+		[]byte("import \"geometry\"\nfunc main() { print(geometry.Area(3, 4)) }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	if err := run([]string{"run", mainPath}, nil, &stdout, &stderr); err != nil {
+		t.Fatalf("run: %v (stderr: %s)", err, stderr.String())
+	}
+	if got := stdout.String(); got != "12\n" {
+		t.Fatalf("stdout = %q, want %q", got, "12\n")
+	}
+}
+
 // `chip fmt --check` fails on unformatted source and passes once it is
 // formatted.
 func TestFmtCheck(t *testing.T) {

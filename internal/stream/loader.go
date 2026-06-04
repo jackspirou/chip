@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -26,19 +27,49 @@ type Loader interface {
 }
 
 // DirLoader returns a Loader that reads packages from the filesystem rooted at
-// base. For Slice 1 a package "name" is the single file <base>/name.chp; Slice 3
-// generalizes this to a directory of files.
+// base. A package "name" is the directory <base>/name (every .chp file in it,
+// ordered by file name); a subpath like "lib/geometry" nests accordingly. As a
+// fallback a single-file package <base>/name.chp is also accepted — the
+// directory form wins when both exist.
 func DirLoader(base string) Loader { return dirLoader{base: base} }
 
 type dirLoader struct{ base string }
 
 func (d dirLoader) Load(importPath string) ([]Source, error) {
-	file := filepath.Join(d.base, filepath.FromSlash(importPath)+".chp")
-	data, err := os.ReadFile(file)
+	dir := filepath.Join(d.base, filepath.FromSlash(importPath))
+	if info, err := os.Stat(dir); err == nil && info.IsDir() {
+		return loadDir(dir)
+	}
+	// Fall back to a single-file package: <base>/importPath.chp.
+	data, err := os.ReadFile(dir + ".chp")
+	if err != nil {
+		return nil, fmt.Errorf("package not found: %s", importPath)
+	}
+	return []Source{{Name: path.Base(importPath) + ".chp", Data: data}}, nil
+}
+
+// loadDir reads every .chp file in dir as the files of one package, ordered by
+// file name (os.ReadDir sorts its entries).
+func loadDir(dir string) ([]Source, error) {
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
-	return []Source{{Name: path.Base(importPath) + ".chp", Data: data}}, nil
+	var srcs []Source
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".chp") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			return nil, err
+		}
+		srcs = append(srcs, Source{Name: e.Name(), Data: data})
+	}
+	if len(srcs) == 0 {
+		return nil, fmt.Errorf("package has no .chp files: %s", dir)
+	}
+	return srcs, nil
 }
 
 // MapLoader returns a Loader backed by an in-memory map of import path → files,
