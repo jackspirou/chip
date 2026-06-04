@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackspirou/chip/internal/ast"
 	"github.com/jackspirou/chip/internal/parser"
+	"github.com/jackspirou/chip/internal/std"
 	"github.com/jackspirou/chip/internal/token"
 	"github.com/jackspirou/chip/internal/types"
 )
@@ -35,6 +36,9 @@ const maxCallDepth = 1 << 14
 // but defines main, main runs at end of input.
 func Run(src io.Reader, out io.Writer) error {
 	e := newEngine(out)
+	if err := e.loadStd(); err != nil {
+		return err
+	}
 	if err := e.feed(src); err != nil {
 		return err
 	}
@@ -47,6 +51,9 @@ func Run(src io.Reader, out io.Writer) error {
 // forward references across lines do not resolve: define before use.
 func REPL(in io.Reader, out io.Writer) error {
 	e := newEngine(out)
+	if err := e.loadStd(); err != nil {
+		return err
+	}
 	sc := bufio.NewScanner(in)
 	for sc.Scan() {
 		if strings.TrimSpace(sc.Text()) == "" {
@@ -70,10 +77,11 @@ type engine struct {
 	globalTypes *typeEnv                           // top-level variable types (for checking)
 
 	// per-source pull state, (re)set by feed
-	next    func() (ast.Node, error, bool)
-	pending []ast.Stmt // top-level statements awaiting execution (FIFO)
-	ranStmt bool       // whether any top-level statement ran (gates main-at-EOF)
-	depth   int        // current call depth (recursion guard)
+	next      func() (ast.Node, error, bool)
+	pending   []ast.Stmt      // top-level statements awaiting execution (FIFO)
+	feedFuncs map[string]bool // functions defined in the current source (duplicate check)
+	ranStmt   bool            // whether any top-level statement ran (gates main-at-EOF)
+	depth     int             // current call depth (recursion guard)
 }
 
 func newEngine(out io.Writer) *engine {
@@ -100,8 +108,15 @@ func (e *engine) feed(src io.Reader) error {
 	defer stop()
 	e.next = next
 	e.pending = nil
+	e.feedFuncs = map[string]bool{}
 	e.ranStmt = false
 	return e.drain()
+}
+
+// loadStd feeds the standard library prelude so its functions are available to
+// every program. It runs before user code on the streaming run path.
+func (e *engine) loadStd() error {
+	return e.feed(strings.NewReader(std.Prelude))
 }
 
 // drain is the pull loop: drain a pending statement (type-checked first, then
@@ -129,6 +144,12 @@ func (e *engine) drain() error {
 			return err
 		}
 		if _, _, err := e.execStmt(stmt, e.global); err != nil {
+			// The checker may have bound a top-level name whose value never
+			// landed because execution failed; drop it so a later REPL line
+			// stays consistent.
+			if d, ok := stmt.(*ast.DeclStmt); ok {
+				delete(e.globalTypes.vars, d.Name.Name)
+			}
 			return err
 		}
 	}
@@ -157,6 +178,12 @@ func (e *engine) register(item ast.Node) error {
 	switch n := item.(type) {
 	case *ast.FuncDecl:
 		if n.Name != nil {
+			// A source may not define the same function twice. This is
+			// per-source, so the REPL (and the prelude) can redefine across feeds.
+			if e.feedFuncs[n.Name.Name] {
+				return TypeError{Pos: n.Name.Pos(), Msg: fmt.Sprintf("%s redeclared", n.Name.Name)}
+			}
+			e.feedFuncs[n.Name.Name] = true
 			e.funcs[n.Name.Name] = n
 		}
 		return e.checkFuncBody(n)

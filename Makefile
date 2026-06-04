@@ -17,7 +17,7 @@ build: ## Compile the chip binary
 	$(GO) build -o $(BIN) ./cmd/chip
 
 run: build ## Build and run the gcd example
-	./$(BIN) test/gcd_main.chp
+	./$(BIN) examples/gcd.chp
 
 test: ## Run tests with the race detector
 	$(GO) test -race -shuffle=on ./...

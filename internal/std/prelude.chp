@@ -1,0 +1,26 @@
+// chip's standard library, written in chip itself.
+//
+// The language keeps only a few primitives built in (print and len); everything
+// else lives here and is loaded before every program. As chip grows, prefer
+// adding capabilities here, in chip, over adding new built-ins.
+
+func abs(n int) int {
+    if n < 0 {
+        return 0 - n
+    }
+    return n
+}
+
+func max(a int, b int) int {
+    if a > b {
+        return a
+    }
+    return b
+}
+
+func min(a int, b int) int {
+    if a < b {
+        return a
+    }
+    return b
+}

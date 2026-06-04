@@ -1,0 +1,9 @@
+// Streaming in action: a top-level statement calls greet before greet has been
+// defined. chip executes as a demand-driven stream, so it reads ahead until the
+// definition arrives, then proceeds. (`chip fmt` would hoist greet above its
+// use.)
+print(greet())
+
+func greet() string {
+    return "streamed!"
+}

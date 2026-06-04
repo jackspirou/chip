@@ -89,15 +89,37 @@ func (e *engine) checkFuncBody(fn *ast.FuncDecl) error {
 	}
 	e.checked[fn] = true // mark first so mutual recursion terminates
 
+	tc := &typeChecker{e: e}
+	if fn.Name != nil && fn.Name.Name == "main" && len(fn.Params) > 0 {
+		return tc.errorf(fn.Name.Pos(), "main must take no arguments")
+	}
+	// Validate parameter and result types up front: an unknown type must be an
+	// error, never silently treated as invalid (which would disable checks).
+	for _, p := range fn.Params {
+		if err := tc.checkTypeExpr(p.Type); err != nil {
+			return err
+		}
+	}
+	for _, r := range fn.Results {
+		if err := tc.checkTypeExpr(r.Type); err != nil {
+			return err
+		}
+	}
+
 	sig := e.sigOf(fn)
+	tc.result = sig.Result
+	// A function with a declared result must return on every path, or it would
+	// fall off the end and yield a type-confused zero value.
+	if sig.Result != nil && !terminates(fn.Body.List) {
+		return tc.errorf(fn.Body.Rbrace, "missing return at end of function %s", fn.Name.Name)
+	}
+
 	scope := newTypeEnv(e.globalTypes)
 	for i, p := range fn.Params {
 		if p.Name != nil {
 			scope.define(p.Name.Name, sig.Params[i])
 		}
 	}
-
-	tc := &typeChecker{e: e, result: sig.Result}
 	return tc.checkStmts(fn.Body.List, scope)
 }
 
@@ -138,6 +160,14 @@ func (tc *typeChecker) checkStmt(s ast.Stmt, scope *typeEnv) error {
 		}
 		if isVoid(t) {
 			return tc.errorf(s.Value.Pos(), "cannot use a void value as an initializer")
+		}
+		// A := may not redeclare a name already bound in the same block. The
+		// global scope is exempt, so a top-level name (and a REPL binding) can be
+		// redefined.
+		if scope != tc.e.globalTypes {
+			if _, exists := scope.vars[s.Name.Name]; exists {
+				return tc.errorf(s.Name.Pos(), "%s redeclared in this block", s.Name.Name)
+			}
 		}
 		scope.define(s.Name.Name, t)
 		return nil
@@ -245,6 +275,22 @@ func (tc *typeChecker) checkCond(cond ast.Expr, scope *typeEnv) error {
 	return nil
 }
 
+// checkTypeExpr reports an error if e does not denote a known type, so an
+// unknown type name cannot slip through as "invalid" and disable checking.
+func (tc *typeChecker) checkTypeExpr(e ast.Expr) error {
+	switch e := e.(type) {
+	case *ast.TypeName:
+		if _, ok := types.Lookup(e.Name); !ok {
+			return tc.errorf(e.Pos(), "undefined type: %s", e.Name)
+		}
+		return nil
+	case *ast.ArrayType:
+		return tc.checkTypeExpr(e.Elem)
+	default:
+		return tc.errorf(e.Pos(), "invalid type")
+	}
+}
+
 func (tc *typeChecker) checkExpr(x ast.Expr, scope *typeEnv) (types.Type, error) {
 	switch x := x.(type) {
 	case *ast.IntLit:
@@ -313,6 +359,9 @@ func (tc *typeChecker) checkBinary(x *ast.BinaryExpr, scope *typeEnv) (types.Typ
 		}
 		return types.Bool, nil
 	case token.EQL, token.NEQ:
+		if isSlice(lt) || isSlice(rt) {
+			return nil, tc.errorf(x.OpPos, "slices are not comparable")
+		}
 		if !types.Identical(lt, rt) {
 			return nil, tc.errorf(x.OpPos, "cannot compare %s and %s", lt, rt)
 		}
@@ -464,4 +513,31 @@ func isNumeric(t types.Type) bool {
 func isOrdered(t types.Type) bool {
 	k := basicKind(t)
 	return k == types.KindInt || k == types.KindFloat || k == types.KindString
+}
+
+// terminates reports whether a statement list always transfers control away
+// (returns, or loops forever), so control never falls off the end. Ported from
+// the batch linter to give the streaming checker a missing-return rule.
+func terminates(list []ast.Stmt) bool {
+	for _, s := range list {
+		if terminatesStmt(s) {
+			return true
+		}
+	}
+	return false
+}
+
+func terminatesStmt(s ast.Stmt) bool {
+	switch s := s.(type) {
+	case *ast.ReturnStmt:
+		return true
+	case *ast.IfStmt:
+		return s.Else != nil && terminates(s.Body.List) && terminatesStmt(s.Else)
+	case *ast.Block:
+		return terminates(s.List)
+	case *ast.ForStmt:
+		return s.Cond == nil // an infinite loop never falls through (chip has no break)
+	default:
+		return false
+	}
 }

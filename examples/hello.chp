@@ -1,0 +1,4 @@
+// The smallest chip program: a main function, run at end of input.
+func main() {
+    print("Hello, chip")
+}

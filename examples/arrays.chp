@@ -1,0 +1,16 @@
+// Slices: a composite literal, len, indexing, and a for loop.
+func sum(xs []int) int {
+    total := 0
+    i := 0
+    for i < len(xs) {
+        total = total + xs[i]
+        i = i + 1
+    }
+    return total
+}
+
+func main() {
+    xs := []int{2, 4, 6, 8}
+    print(len(xs))
+    print(sum(xs))
+}

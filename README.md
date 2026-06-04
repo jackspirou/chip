@@ -27,3 +27,17 @@ With Go as a guide, I want to produce a toy scripting language that has extreme
 minimal syntax. I also want the Go implementation to be idiomatic.
 
 This project is not a race, but a labor of love.
+
+Try it
+------
+```sh
+go build -o chip ./cmd/chip
+./chip run examples/hello.chp     # or the shorthand: ./chip examples/hello.chp
+./chip repl                       # an interactive session
+```
+
+Learn more
+----------
+- [ARCHITECTURE.md](ARCHITECTURE.md) — how chip streams: the demand-driven pull
+  engine, the checked tree-walker, the standard library, and the package layout.
+- [examples/](examples/) — small, runnable programs, each verified by a test.

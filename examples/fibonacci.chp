@@ -1,0 +1,12 @@
+// Recursive Fibonacci. fib is defined before main uses it (define-before-use),
+// which is the order `chip fmt` produces.
+func fib(n int) int {
+    if n < 2 {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+func main() {
+    print(fib(10))
+}

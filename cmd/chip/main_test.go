@@ -9,7 +9,7 @@ import (
 // `chip run test/gcd_main.chp` streams the program and prints 21.
 func TestRunGCDFile(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	if err := run([]string{"run", "../../test/gcd_main.chp"}, nil, &stdout, &stderr); err != nil {
+	if err := run([]string{"run", "../../examples/gcd.chp"}, nil, &stdout, &stderr); err != nil {
 		t.Fatalf("run: %v (stderr: %s)", err, stderr.String())
 	}
 	if got := stdout.String(); got != "21\n" {
@@ -20,7 +20,7 @@ func TestRunGCDFile(t *testing.T) {
 // The bare-file shorthand behaves like `chip run`.
 func TestRunShorthand(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	if err := run([]string{"../../test/gcd_main.chp"}, nil, &stdout, &stderr); err != nil {
+	if err := run([]string{"../../examples/gcd.chp"}, nil, &stdout, &stderr); err != nil {
 		t.Fatalf("run: %v (stderr: %s)", err, stderr.String())
 	}
 	if got := stdout.String(); got != "21\n" {
