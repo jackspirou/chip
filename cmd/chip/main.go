@@ -77,11 +77,20 @@ func cmdRepl(stdin io.Reader, stdout io.Writer) error {
 	return stream.REPL(stdin, stdout)
 }
 
-// cmdFmt prints a program in canonical form (or rewrites it in place with -w).
+// cmdFmt prints a program in canonical form, rewrites it in place (-w), or
+// verifies it is already canonical (--check, for CI).
 func cmdFmt(args []string, stdout, stderr io.Writer) error {
-	write := false
-	if len(args) > 0 && args[0] == "-w" {
-		write, args = true, args[1:]
+	var write, check bool
+	for len(args) > 0 && strings.HasPrefix(args[0], "-") {
+		switch args[0] {
+		case "-w":
+			write = true
+		case "-check", "--check":
+			check = true
+		default:
+			return fmt.Errorf("unknown flag for fmt: %s", args[0])
+		}
+		args = args[1:]
 	}
 	path, src, err := readSource(args)
 	if err != nil {
@@ -92,11 +101,19 @@ func cmdFmt(args []string, stdout, stderr io.Writer) error {
 		report(stderr, path, src, err)
 		return errReported
 	}
-	if write {
+	switch {
+	case check:
+		if !bytes.Equal(out, src) {
+			fmt.Fprintf(stderr, "%s: not formatted (run: chip fmt -w %s)\n", path, path)
+			return errReported
+		}
+		return nil
+	case write:
 		return os.WriteFile(path, out, 0o644)
+	default:
+		_, err = stdout.Write(out)
+		return err
 	}
-	_, err = stdout.Write(out)
-	return err
 }
 
 // cmdLint reports style and correctness issues.
@@ -224,7 +241,7 @@ func usage(w io.Writer) {
 usage:
     chip run  <file.chp>    stream and run a program
     chip repl               evaluate source line by line, carrying state over
-    chip fmt  <file.chp>    print canonical formatting (-w rewrites in place)
+    chip fmt  <file.chp>    print canonical formatting (-w rewrites, --check verifies)
     chip lint <file.chp>    report unused names, missing returns, dead code
     chip dump <file.chp>    disassemble a program's bytecode
     chip ast  <file.chp>    print a program's syntax tree

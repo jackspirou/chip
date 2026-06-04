@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -25,6 +27,32 @@ func TestRunShorthand(t *testing.T) {
 	}
 	if got := stdout.String(); got != "21\n" {
 		t.Fatalf("stdout = %q, want %q", got, "21\n")
+	}
+}
+
+// `chip fmt --check` fails on unformatted source and passes once it is
+// formatted.
+func TestFmtCheck(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "p.chp")
+	if err := os.WriteFile(path, []byte("func  main( ){print( 1 )}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var out, errOut bytes.Buffer
+	if err := run([]string{"fmt", "--check", path}, nil, &out, &errOut); err == nil {
+		t.Fatal("expected --check to fail on unformatted source")
+	}
+
+	out.Reset()
+	errOut.Reset()
+	if err := run([]string{"fmt", "-w", path}, nil, &out, &errOut); err != nil {
+		t.Fatalf("fmt -w: %v", err)
+	}
+
+	out.Reset()
+	errOut.Reset()
+	if err := run([]string{"fmt", "--check", path}, nil, &out, &errOut); err != nil {
+		t.Fatalf("expected --check to pass after formatting, got %v (%s)", err, errOut.String())
 	}
 }
 
