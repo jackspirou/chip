@@ -56,17 +56,14 @@ func exitStatus(err error) int {
 	if err == nil {
 		return 0 // success / clean
 	}
-	var ee *exitError
-	if errors.As(err, &ee) {
+	if ee, ok := errors.AsType[*exitError](err); ok {
 		return ee.code // the command already reported and chose its code
 	}
-	var ue *usageError
-	if errors.As(err, &ue) {
+	if ue, ok := errors.AsType[*usageError](err); ok {
 		fmt.Fprintln(os.Stderr, "chip:", ue.Error())
 		return 64 // EX_USAGE — bad flag / args
 	}
-	var ne *noInputError
-	if errors.As(err, &ne) {
+	if ne, ok := errors.AsType[*noInputError](err); ok {
 		fmt.Fprintln(os.Stderr, "chip:", ne.Error())
 		return 66 // EX_NOINPUT — source missing / unreadable
 	}

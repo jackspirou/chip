@@ -21,15 +21,13 @@ import (
 // errors. Both are the position the offending token starts at.
 func diagPos(t *testing.T, err error) token.Pos {
 	t.Helper()
-	var list parser.ErrorList
-	if errors.As(err, &list) {
+	if list, ok := errors.AsType[parser.ErrorList](err); ok {
 		if len(list) == 0 {
 			t.Fatal("empty parser.ErrorList")
 		}
 		return list[0].Pos
 	}
-	var te TypeError
-	if errors.As(err, &te) {
+	if te, ok := errors.AsType[TypeError](err); ok {
 		return te.Pos
 	}
 	t.Fatalf("error %v (%T) carries no diagnostic position", err, err)
