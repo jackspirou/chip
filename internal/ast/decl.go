@@ -70,6 +70,59 @@ func (d *File) Pos() token.Pos {
 	}
 }
 
+func (d *Field) End() token.Pos {
+	if d.Type != nil {
+		return d.Type.End()
+	}
+	if d.Name != nil {
+		return d.Name.End()
+	}
+	return token.Pos{}
+}
+
+func (d *FuncDecl) End() token.Pos {
+	if d.Body != nil {
+		return d.Body.End()
+	}
+	if n := len(d.Results); n > 0 {
+		return d.Results[n-1].End()
+	}
+	if d.Name != nil {
+		return d.Name.End()
+	}
+	return endOf(d.Func, "func")
+}
+
+func (d *ImportSpec) End() token.Pos {
+	if d.Path != nil {
+		return d.Path.End()
+	}
+	if d.Name != nil {
+		return d.Name.End()
+	}
+	return token.Pos{}
+}
+
+// End returns the end of the file's last top-level element. Decls and Stmts are
+// stored separately but interleave in source, so the furthest end by byte offset
+// wins.
+func (d *File) End() token.Pos {
+	end := token.Pos{}
+	if d.Package != nil {
+		end = maxPos(end, d.Package.End())
+	}
+	for _, im := range d.Imports {
+		end = maxPos(end, im.End())
+	}
+	for _, dc := range d.Decls {
+		end = maxPos(end, dc.End())
+	}
+	for _, st := range d.Stmts {
+		end = maxPos(end, st.End())
+	}
+	return end
+}
+
 func (*Field) node()      {}
 func (*FuncDecl) node()   {}
 func (*ImportSpec) node() {}

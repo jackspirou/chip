@@ -35,10 +35,13 @@ func (p *Parser) Items() iter.Seq2[ast.Node, error] {
 
 		for p.tok.Type != token.EOF {
 			start := p.nadv
-			item := p.parseTopLevel()
+			item, _ := p.parseTopLevelSafe()
 			if p.nadv == start {
 				p.next() // guarantee progress on a malformed item
 			}
+			// A depth bailout records a parse error, so the errs.Err check below
+			// ends the stream just as any other parse error would — no separate
+			// handling of the bailed flag is needed here.
 			if err := p.errs.Err(); err != nil {
 				yield(nil, err)
 				return

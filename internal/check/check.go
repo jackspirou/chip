@@ -9,6 +9,7 @@ import (
 	"github.com/jackspirou/chip/internal/ast"
 	"github.com/jackspirou/chip/internal/scope"
 	"github.com/jackspirou/chip/internal/token"
+	"github.com/jackspirou/chip/internal/typerules"
 	"github.com/jackspirou/chip/internal/types"
 )
 
@@ -24,6 +25,7 @@ type Checker struct {
 	info     *Info
 	universe *scope.Scope     // predeclared builtins
 	global   *scope.Scope     // top-level declarations
+	file     *scope.Scope     // top-level statement bindings (redefinable, like the REPL)
 	scope    *scope.Scope     // current scope while checking a body
 	sig      *types.Signature // signature of the function being checked
 	errs     ErrorList
@@ -46,8 +48,29 @@ func Check(file *ast.File) (*Info, error) {
 	c.collect(file)
 	c.collectImports(file)
 	c.checkFuncs(file)
+	c.checkTopStmts(file)
 
 	return c.info, c.errs.Err()
+}
+
+// checkTopStmts checks the program's top-level statements in a scope nested in
+// the global declarations, so they may reference top-level functions, imports,
+// and earlier top-level bindings. The streaming runtime checks these per
+// statement just before each runs (and the batch compiler ignores them); this
+// pass lets whole-program tooling — chip check, lint — see top-level errors too.
+//
+// Like the streaming runtime (and the REPL), a top-level := may rebind a name,
+// so a redefinition overwrites rather than reporting a redeclaration.
+func (c *Checker) checkTopStmts(file *ast.File) {
+	if len(file.Stmts) == 0 {
+		return
+	}
+	c.file = scope.New(c.global)
+	c.scope, c.sig = c.file, nil
+	for _, s := range file.Stmts {
+		c.checkStmt(s)
+	}
+	c.scope = nil
 }
 
 // collectImports registers each imported package's reference name (its alias,
@@ -167,6 +190,19 @@ func (c *Checker) checkFunc(fn *ast.FuncDecl) {
 		return
 	}
 
+	// main must take no arguments, and a function with a declared result must
+	// return on every path. The streaming checker (chip run) rejects both; this
+	// batch checker (chip check) must reject them too, or it would pass code that
+	// run refuses — the rules are shared with run via internal/typerules so they
+	// cannot drift. A missing return is reported at the closing brace, where
+	// control would fall off the end.
+	if typerules.MainTakesArgs(fn) {
+		c.errorf(fn.Name.Pos(), "main must take no arguments")
+	}
+	if sig.Result != nil && !typerules.Terminates(fn.Body.List) {
+		c.errorf(fn.Body.Rbrace, "missing return at end of function %s", fn.Name.Name)
+	}
+
 	fnScope := scope.New(c.global)
 	for i, f := range fn.Params {
 		if f.Name == nil {
@@ -199,31 +235,13 @@ func (c *Checker) errorf(pos token.Pos, format string, args ...any) {
 //
 // type predicates
 //
+// These forward to internal/typerules so the streaming checker (chip run) and
+// this batch checker (chip check) share one definition of every rule and cannot
+// drift. The local names keep the call sites in this package readable.
 
-func basicKind(t types.Type) types.Kind {
-	if b, ok := t.(types.Basic); ok {
-		return b.Kind
-	}
-	return types.KindInvalid
-}
-
-func isInvalid(t types.Type) bool { return basicKind(t) == types.KindInvalid && !isSlice(t) }
-func isVoid(t types.Type) bool    { return basicKind(t) == types.KindVoid }
-func isBool(t types.Type) bool    { return basicKind(t) == types.KindBool }
-func isInt(t types.Type) bool     { return basicKind(t) == types.KindInt }
-func isString(t types.Type) bool  { return basicKind(t) == types.KindString }
-
-func isSlice(t types.Type) bool {
-	_, ok := t.(types.Slice)
-	return ok
-}
-
-func isNumeric(t types.Type) bool {
-	k := basicKind(t)
-	return k == types.KindInt || k == types.KindFloat
-}
-
-func isOrdered(t types.Type) bool {
-	k := basicKind(t)
-	return k == types.KindInt || k == types.KindFloat || k == types.KindString
-}
+func isInvalid(t types.Type) bool { return typerules.IsInvalid(t) }
+func isVoid(t types.Type) bool    { return typerules.IsVoid(t) }
+func isBool(t types.Type) bool    { return typerules.IsBool(t) }
+func isInt(t types.Type) bool     { return typerules.IsInt(t) }
+func isString(t types.Type) bool  { return typerules.IsString(t) }
+func isSlice(t types.Type) bool   { return typerules.IsSlice(t) }

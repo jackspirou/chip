@@ -301,7 +301,9 @@ func (e *engine) callIn(home *pkg, fn *ast.FuncDecl, args []value.Value, pos tok
 // that allocates nothing: it formats the one value straight into the reused
 // byte buffer. Multiple arguments keep a per-call []string — the same 16 B/elem
 // holder the original used — but drop the strings.Join + Fprintln in favor of
-// the reused buffer.
+// the reused buffer. The finished line goes out through emit, which honors the
+// --max-output cap and otherwise writes it directly (write errors unsurfaced,
+// as before).
 func (e *engine) callPrint(x *ast.CallExpr, scope *env) (value.Value, error) {
 	if len(x.Args) == 1 {
 		v, err := e.eval(x.Args[0], scope)
@@ -311,8 +313,7 @@ func (e *engine) callPrint(x *ast.CallExpr, scope *env) (value.Value, error) {
 		buf := append(e.printBuf[:0], v.String()...)
 		buf = append(buf, '\n')
 		e.printBuf = buf
-		_, _ = e.out.Write(buf)
-		return value.Value{}, nil
+		return value.Value{}, e.emit(x.Lparen, buf)
 	}
 
 	parts := make([]string, len(x.Args))
@@ -332,8 +333,7 @@ func (e *engine) callPrint(x *ast.CallExpr, scope *env) (value.Value, error) {
 	}
 	buf = append(buf, '\n')
 	e.printBuf = buf
-	_, _ = e.out.Write(buf) // matches the previous Fprintln: write errors are not surfaced
-	return value.Value{}, nil
+	return value.Value{}, e.emit(x.Lparen, buf)
 }
 
 // callLen returns the length of a string or slice.

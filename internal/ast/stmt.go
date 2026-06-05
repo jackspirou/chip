@@ -66,6 +66,41 @@ func (s *IfStmt) Pos() token.Pos     { return s.If }
 func (s *ForStmt) Pos() token.Pos    { return s.For }
 func (s *BadStmt) Pos() token.Pos    { return s.From }
 
+func (s *Block) End() token.Pos { return after(s.Rbrace) }
+
+func (s *DeclStmt) End() token.Pos {
+	if s.Value != nil {
+		return s.Value.End()
+	}
+	return endOf(s.DefPos, token.DEFINE.String())
+}
+
+func (s *AssignStmt) End() token.Pos {
+	if s.Rhs != nil {
+		return s.Rhs.End()
+	}
+	return endOf(s.OpPos, s.Op.String())
+}
+
+func (s *ExprStmt) End() token.Pos { return s.X.End() }
+
+func (s *ReturnStmt) End() token.Pos {
+	if s.Result != nil {
+		return s.Result.End()
+	}
+	return endOf(s.Return, "return")
+}
+
+func (s *IfStmt) End() token.Pos {
+	if s.Else != nil {
+		return s.Else.End()
+	}
+	return s.Body.End()
+}
+
+func (s *ForStmt) End() token.Pos { return s.Body.End() }
+func (s *BadStmt) End() token.Pos { return s.From }
+
 func (*Block) node()      {}
 func (*DeclStmt) node()   {}
 func (*AssignStmt) node() {}

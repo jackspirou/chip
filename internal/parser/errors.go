@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 
+	"github.com/jackspirou/chip/internal/diag"
 	"github.com/jackspirou/chip/internal/token"
 )
 
@@ -38,4 +39,25 @@ func (l ErrorList) Err() error {
 		return nil
 	}
 	return l
+}
+
+// Diagnostics renders the list as structured diagnostics: every parse error is
+// an error in the parse phase. It implements diag.Diagnoser so the renderers can
+// present parse errors without type-switching.
+func (l ErrorList) Diagnostics() []diag.Diagnostic {
+	ds := make([]diag.Diagnostic, len(l))
+	for i, e := range l {
+		ds[i] = diag.Diagnostic{
+			Severity: diag.SeverityError,
+			Phase:    diag.PhaseParse,
+			Message:  e.Msg,
+			Primary: diag.Primary{
+				IsPrimary: true,
+				Line:      e.Pos.Line,
+				Column:    e.Pos.Column,
+				Offset:    e.Pos.Offset,
+			},
+		}
+	}
+	return ds
 }

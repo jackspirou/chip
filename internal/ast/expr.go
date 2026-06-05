@@ -108,6 +108,49 @@ func (e *CompositeLit) Pos() token.Pos { return e.Type.Pos() }
 func (e *TypeName) Pos() token.Pos     { return e.NamePos }
 func (e *BadExpr) Pos() token.Pos      { return e.From }
 
+func (e *Ident) End() token.Pos     { return endOf(e.NamePos, e.Name) }
+func (e *IntLit) End() token.Pos    { return endOf(e.ValuePos, e.Lit) }
+func (e *FloatLit) End() token.Pos  { return endOf(e.ValuePos, e.Lit) }
+func (e *StringLit) End() token.Pos { return endOf(e.ValuePos, `"`+e.Value+`"`) } // span includes the quotes the literal omits
+
+func (e *UnaryExpr) End() token.Pos {
+	if e.X != nil {
+		return e.X.End()
+	}
+	return after(e.OpPos)
+}
+
+func (e *BinaryExpr) End() token.Pos {
+	if e.Right != nil {
+		return e.Right.End()
+	}
+	return e.Left.End()
+}
+
+func (e *CallExpr) End() token.Pos  { return after(e.Rparen) }
+func (e *IndexExpr) End() token.Pos { return after(e.Rbrack) }
+
+func (e *SelectorExpr) End() token.Pos {
+	if e.Sel != nil {
+		return e.Sel.End()
+	}
+	return e.X.End()
+}
+
+func (e *ArrayType) End() token.Pos {
+	if e.Elem != nil {
+		return e.Elem.End()
+	}
+	if e.Len != nil {
+		return e.Len.End()
+	}
+	return after(e.Lbrack)
+}
+
+func (e *CompositeLit) End() token.Pos { return after(e.Rbrace) }
+func (e *TypeName) End() token.Pos     { return endOf(e.NamePos, e.Name) }
+func (e *BadExpr) End() token.Pos      { return e.From }
+
 func (*Ident) node()        {}
 func (*IntLit) node()       {}
 func (*FloatLit) node()     {}

@@ -20,8 +20,13 @@ func (p *Parser) parseBlock() *ast.Block {
 	return &ast.Block{Lbrace: lbrace, List: list, Rbrace: rbrace}
 }
 
-// parseStmt parses a single statement.
+// parseStmt parses a single statement. Every statement in a block reaches here,
+// so the depth guard bounds block-nested control flow (if/for bodies). Else-if
+// chains recurse through parseIf without re-entering parseStmt, so parseIf
+// guards itself separately.
 func (p *Parser) parseStmt() ast.Stmt {
+	p.enter()
+	defer p.leave()
 	switch p.tok.Type {
 	case token.IF:
 		return p.parseIf()
@@ -65,8 +70,14 @@ func (p *Parser) parseSimpleStmt() ast.Stmt {
 	}
 }
 
-// parseIf parses an if statement with an optional else / else-if.
+// parseIf parses an if statement with an optional else / else-if. An else-if
+// chain recurses here directly (els = parseIf) rather than through parseStmt, and
+// each iteration's block is fully parsed and left before the tail recurses, so
+// the parseStmt and parseBlock guards do not see the chain depth — parseIf must
+// guard itself to bound a long else-if chain.
 func (p *Parser) parseIf() ast.Stmt {
+	p.enter()
+	defer p.leave()
 	ifPos := p.expect(token.IF)
 	cond := p.parseExpr()
 	body := p.parseBlock()

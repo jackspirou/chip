@@ -4,7 +4,9 @@ import (
 	"fmt"
 
 	"github.com/jackspirou/chip/internal/ast"
+	"github.com/jackspirou/chip/internal/diag"
 	"github.com/jackspirou/chip/internal/token"
+	"github.com/jackspirou/chip/internal/typerules"
 	"github.com/jackspirou/chip/internal/types"
 )
 
@@ -23,6 +25,23 @@ type TypeError struct {
 
 func (e TypeError) Error() string {
 	return fmt.Sprintf("%d:%d: %s", e.Pos.Line, e.Pos.Column, e.Msg)
+}
+
+// Diagnostics renders the error as a single structured diagnostic in the type
+// phase. It implements diag.Diagnoser so the renderers can present a streaming
+// type error without type-switching.
+func (e TypeError) Diagnostics() []diag.Diagnostic {
+	return []diag.Diagnostic{{
+		Severity: diag.SeverityError,
+		Phase:    diag.PhaseType,
+		Message:  e.Msg,
+		Primary: diag.Primary{
+			IsPrimary: true,
+			Line:      e.Pos.Line,
+			Column:    e.Pos.Column,
+			Offset:    e.Pos.Offset,
+		},
+	}}
 }
 
 // typeEnv mirrors env but binds names to their static types for checking.
@@ -90,7 +109,7 @@ func (e *engine) checkFuncBody(fn *ast.FuncDecl) error {
 	e.checked[fn] = true // mark first so mutual recursion terminates
 
 	tc := &typeChecker{e: e}
-	if fn.Name != nil && fn.Name.Name == "main" && len(fn.Params) > 0 {
+	if typerules.MainTakesArgs(fn) {
 		return tc.errorf(fn.Name.Pos(), "main must take no arguments")
 	}
 	// Validate parameter and result types up front: an unknown type must be an
@@ -109,8 +128,9 @@ func (e *engine) checkFuncBody(fn *ast.FuncDecl) error {
 	sig := e.sigOf(fn)
 	tc.result = sig.Result
 	// A function with a declared result must return on every path, or it would
-	// fall off the end and yield a type-confused zero value.
-	if sig.Result != nil && !terminates(fn.Body.List) {
+	// fall off the end and yield a type-confused zero value. The termination rule
+	// is shared with chip check via typerules.
+	if sig.Result != nil && !typerules.Terminates(fn.Body.List) {
 		return tc.errorf(fn.Body.Rbrace, "missing return at end of function %s", fn.Name.Name)
 	}
 
@@ -332,20 +352,14 @@ func (tc *typeChecker) checkUnary(x *ast.UnaryExpr, scope *typeEnv) (types.Type,
 	if err != nil {
 		return nil, err
 	}
-	switch x.Op {
-	case token.ADD, token.SUB:
-		if !isNumeric(t) {
-			return nil, tc.errorf(x.OpPos, "operator %s requires a numeric operand, got %s", x.Op, t)
-		}
-		return t, nil
-	case token.NOT:
-		if !isBool(t) {
-			return nil, tc.errorf(x.OpPos, "operator ! requires a bool operand, got %s", t)
-		}
-		return types.Bool, nil
-	default:
-		return nil, tc.errorf(x.OpPos, "operator %s is not supported", x.Op)
+	// The operator rule is shared with the batch checker (chip check) via
+	// typerules, so the two cannot disagree on which operators and operand types
+	// are allowed. This checker fails fast, so any error stops the run.
+	res, msg := typerules.Unary(x.Op, t)
+	if msg != "" {
+		return nil, tc.errorf(x.OpPos, "%s", msg)
 	}
+	return res, nil
 }
 
 func (tc *typeChecker) checkBinary(x *ast.BinaryExpr, scope *typeEnv) (types.Type, error) {
@@ -357,44 +371,12 @@ func (tc *typeChecker) checkBinary(x *ast.BinaryExpr, scope *typeEnv) (types.Typ
 	if err != nil {
 		return nil, err
 	}
-
-	switch x.Op {
-	case token.LAND, token.LOR:
-		if !isBool(lt) || !isBool(rt) {
-			return nil, tc.errorf(x.OpPos, "operator %s requires bool operands, got %s and %s", x.Op, lt, rt)
-		}
-		return types.Bool, nil
-	case token.EQL, token.NEQ:
-		if isSlice(lt) || isSlice(rt) {
-			return nil, tc.errorf(x.OpPos, "slices are not comparable")
-		}
-		if !types.Identical(lt, rt) {
-			return nil, tc.errorf(x.OpPos, "cannot compare %s and %s", lt, rt)
-		}
-		return types.Bool, nil
-	case token.LSS, token.LEQ, token.GTR, token.GEQ:
-		if !types.Identical(lt, rt) || !isOrdered(lt) {
-			return nil, tc.errorf(x.OpPos, "operator %s is not defined for %s and %s", x.Op, lt, rt)
-		}
-		return types.Bool, nil
-	case token.ADD:
-		if !types.Identical(lt, rt) || (!isNumeric(lt) && !isString(lt)) {
-			return nil, tc.errorf(x.OpPos, "operator + is not defined for %s and %s", lt, rt)
-		}
-		return lt, nil
-	case token.SUB, token.MUL, token.QUO:
-		if !types.Identical(lt, rt) || !isNumeric(lt) {
-			return nil, tc.errorf(x.OpPos, "operator %s is not defined for %s and %s", x.Op, lt, rt)
-		}
-		return lt, nil
-	case token.REM:
-		if !isInt(lt) || !isInt(rt) {
-			return nil, tc.errorf(x.OpPos, "operator %% requires int operands, got %s and %s", lt, rt)
-		}
-		return types.Int, nil
-	default:
-		return nil, tc.errorf(x.OpPos, "operator %s is not supported", x.Op)
+	// Shared with the batch checker via typerules (see checkUnary).
+	res, msg := typerules.Binary(x.Op, lt, rt)
+	if msg != "" {
+		return nil, tc.errorf(x.OpPos, "%s", msg)
 	}
+	return res, nil
 }
 
 // checkCall dispatches by the shape of the callee — a bare name (a builtin or a
@@ -523,60 +505,16 @@ func (tc *typeChecker) checkCompositeLit(x *ast.CompositeLit, scope *typeEnv) (t
 }
 
 //
-// type predicates (mirroring internal/check)
+// type predicates
 //
+// These forward to internal/typerules so the streaming checker (chip run) and
+// the batch checker (chip check) share one definition of every rule and cannot
+// drift. The control-flow rule (Terminates) and the operator rules (Binary,
+// Unary) live in typerules too and are called inline.
 
-func basicKind(t types.Type) types.Kind {
-	if b, ok := t.(types.Basic); ok {
-		return b.Kind
-	}
-	return types.KindInvalid
-}
-
-func isInvalid(t types.Type) bool { return basicKind(t) == types.KindInvalid && !isSlice(t) }
-func isVoid(t types.Type) bool    { return basicKind(t) == types.KindVoid }
-func isBool(t types.Type) bool    { return basicKind(t) == types.KindBool }
-func isInt(t types.Type) bool     { return basicKind(t) == types.KindInt }
-func isString(t types.Type) bool  { return basicKind(t) == types.KindString }
-
-func isSlice(t types.Type) bool {
-	_, ok := t.(types.Slice)
-	return ok
-}
-
-func isNumeric(t types.Type) bool {
-	k := basicKind(t)
-	return k == types.KindInt || k == types.KindFloat
-}
-
-func isOrdered(t types.Type) bool {
-	k := basicKind(t)
-	return k == types.KindInt || k == types.KindFloat || k == types.KindString
-}
-
-// terminates reports whether a statement list always transfers control away
-// (returns, or loops forever), so control never falls off the end. Ported from
-// the batch linter to give the streaming checker a missing-return rule.
-func terminates(list []ast.Stmt) bool {
-	for _, s := range list {
-		if terminatesStmt(s) {
-			return true
-		}
-	}
-	return false
-}
-
-func terminatesStmt(s ast.Stmt) bool {
-	switch s := s.(type) {
-	case *ast.ReturnStmt:
-		return true
-	case *ast.IfStmt:
-		return s.Else != nil && terminates(s.Body.List) && terminatesStmt(s.Else)
-	case *ast.Block:
-		return terminates(s.List)
-	case *ast.ForStmt:
-		return s.Cond == nil // an infinite loop never falls through (chip has no break)
-	default:
-		return false
-	}
-}
+func isInvalid(t types.Type) bool { return typerules.IsInvalid(t) }
+func isVoid(t types.Type) bool    { return typerules.IsVoid(t) }
+func isBool(t types.Type) bool    { return typerules.IsBool(t) }
+func isInt(t types.Type) bool     { return typerules.IsInt(t) }
+func isString(t types.Type) bool  { return typerules.IsString(t) }
+func isSlice(t types.Type) bool   { return typerules.IsSlice(t) }

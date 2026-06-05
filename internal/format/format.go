@@ -78,7 +78,7 @@ func (p *printer) flushRemaining() {
 }
 
 func (p *printer) comment(text string) {
-	for _, ln := range strings.Split(text, "\n") {
+	for ln := range strings.SplitSeq(text, "\n") {
 		p.line("// " + strings.TrimRight(ln, " \t\r"))
 	}
 }

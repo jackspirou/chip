@@ -8,6 +8,7 @@ package chip
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 
@@ -90,6 +91,30 @@ func Run(src []byte, out io.Writer) error {
 	return asError(stream.Run(bytes.NewReader(src), out))
 }
 
+// Limits bounds a run's resource use for RunWith (plan §4.1). A zero field
+// imposes no limit on that dimension; a zero Depth uses chip's default
+// call-depth limit. The caps are enforced cooperatively, so Steps is
+// deterministic for a given program and input.
+type Limits struct {
+	Steps    int64 // max interpreter steps; 0 = unlimited
+	OutBytes int64 // max bytes written to w; 0 = unlimited
+	Depth    int   // max call depth; 0 = default
+}
+
+// RunWith streams and executes chip source from r like Run while enforcing
+// resource caps: ctx cancellation imposes a wall-clock timeout (a cancelled ctx
+// stops the run and is reported as a timeout), and lim bounds interpreter steps,
+// output bytes, and call depth. Program output is written to w; imports resolve
+// against the current directory. On a parse, type, runtime, or resource-cap
+// error it returns an *Error carrying positioned diagnostics.
+func RunWith(ctx context.Context, r io.Reader, w io.Writer, lim Limits) error {
+	return asError(stream.RunWithLimits(ctx, r, w, stream.DirLoader("."), stream.Limits{
+		Steps:    lim.Steps,
+		OutBytes: lim.OutBytes,
+		Depth:    lim.Depth,
+	}))
+}
+
 // Format returns src rewritten in canonical form. Like gofmt, it only requires
 // the source to parse; it does not type-check.
 func Format(src []byte) ([]byte, error) {
@@ -155,6 +180,8 @@ func diagnostics(v any) []Diagnostic {
 	case stream.TypeError:
 		ds = append(ds, Diagnostic{Line: e.Pos.Line, Col: e.Pos.Column, Msg: e.Msg})
 	case stream.RuntimeError:
+		ds = append(ds, Diagnostic{Line: e.Pos.Line, Col: e.Pos.Column, Msg: e.Msg})
+	case stream.ResourceError:
 		ds = append(ds, Diagnostic{Line: e.Pos.Line, Col: e.Pos.Column, Msg: e.Msg})
 	}
 	return ds

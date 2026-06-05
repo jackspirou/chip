@@ -16,6 +16,7 @@ type Parser struct {
 	scan     *scanner.Scanner
 	tok      token.Token // current token
 	nadv     int         // number of tokens advanced (progress counter)
+	depth    int         // current recursive-descent nesting depth; see enter/maxDepth
 	comments []*ast.Comment
 	errs     ErrorList
 	opts     options
@@ -49,7 +50,7 @@ func (p *Parser) Parse() (*ast.File, error) {
 func (p *Parser) next() {
 	tok := p.scan.Next()
 	for tok.Type == token.COMMENT {
-		p.comments = append(p.comments, &ast.Comment{Slash: tok.Pos(), Text: tok.String()})
+		p.comments = append(p.comments, &ast.Comment{Slash: tok.Pos(), EndPos: tok.End(), Text: tok.String()})
 		tok = p.scan.Next()
 	}
 	if tok.Type == token.ERROR {

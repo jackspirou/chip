@@ -1,0 +1,19 @@
+version: 2
+updates:
+  # Keep GitHub Actions SHA pins fresh (Dependabot bumps both the pin and the
+  # version comment), so SHA-pinning does not mean falling behind on fixes.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+
+  # chip is stdlib-only today; this tracks the Go toolchain directive and any
+  # future module dependencies.
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: deps

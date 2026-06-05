@@ -27,8 +27,24 @@ func (s *Scope) Insert(sym *Symbol) *Symbol {
 	return nil
 }
 
+// Replace declares sym in s, overwriting any existing binding of the same name.
+// Unlike Insert it never reports a conflict; it is for scopes where a name may
+// be redefined, such as the top-level (file and REPL) scope.
+func (s *Scope) Replace(sym *Symbol) { s.symbols[sym.Name] = sym }
+
 // Lookup returns the symbol named name declared directly in s, or nil.
 func (s *Scope) Lookup(name string) *Symbol { return s.symbols[name] }
+
+// Names returns the names declared directly in s (not its ancestors), in no
+// particular order. It lets name resolution enumerate candidate names for a
+// "did you mean" suggestion when a lookup fails.
+func (s *Scope) Names() []string {
+	names := make([]string, 0, len(s.symbols))
+	for name := range s.symbols {
+		names = append(names, name)
+	}
+	return names
+}
 
 // LookupParent searches s and its ancestors, returning the first symbol named
 // name or nil if none is found.

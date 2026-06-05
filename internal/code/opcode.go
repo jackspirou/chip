@@ -6,67 +6,69 @@ package code
 type Opcode uint8
 
 const (
-	OpConst        Opcode = iota // push Constants[operand]
-	OpTrue                       // push true
-	OpFalse                      // push false
-	OpPop                        // discard top of stack
-	OpAdd                        // push a + b
-	OpSub                        // push a - b
-	OpMul                        // push a * b
-	OpDiv                        // push a / b
-	OpRem                        // push a % b
-	OpNeg                        // push -a
-	OpNot                        // push !a
-	OpEqual                      // push a == b
-	OpNotEqual                   // push a != b
-	OpLess                       // push a < b
-	OpLessEqual                  // push a <= b
-	OpGreater                    // push a > b
-	OpGreaterEqual               // push a >= b
-	OpGetLocal                   // push locals[operand]
-	OpSetLocal                   // locals[operand] = pop
-	OpJump                       // ip = operand
-	OpJumpIfFalse                // pop; if false, ip = operand
-	OpCall                       // call Functions[operand]
-	OpReturn                     // return the value on top of stack
-	OpReturnVoid                 // return no value
-	OpPrint                      // print the top `operand` values
-	OpMakeArray                  // build a slice from the top `operand` values
-	OpIndex                      // push arr[i]
-	OpSetIndex                   // arr[i] = v
-	OpLen                        // push len(x)
+	OpConst         Opcode = iota // push Constants[operand]
+	OpTrue                        // push true
+	OpFalse                       // push false
+	OpPop                         // discard top of stack
+	OpAdd                         // push a + b
+	OpSub                         // push a - b
+	OpMul                         // push a * b
+	OpDiv                         // push a / b
+	OpRem                         // push a % b
+	OpNeg                         // push -a
+	OpNot                         // push !a
+	OpEqual                       // push a == b
+	OpNotEqual                    // push a != b
+	OpLess                        // push a < b
+	OpLessEqual                   // push a <= b
+	OpGreater                     // push a > b
+	OpGreaterEqual                // push a >= b
+	OpGetLocal                    // push locals[operand]
+	OpSetLocal                    // locals[operand] = pop
+	OpJump                        // ip = operand
+	OpJumpIfFalse                 // pop; if false, ip = operand
+	OpCall                        // call Functions[operand]
+	OpReturn                      // return the value on top of stack
+	OpReturnVoid                  // return no value
+	OpMissingReturn               // trap: a result-typed function fell through without returning
+	OpPrint                       // print the top `operand` values
+	OpMakeArray                   // build a slice from the top `operand` values
+	OpIndex                       // push arr[i]
+	OpSetIndex                    // arr[i] = v
+	OpLen                         // push len(x)
 )
 
 var opNames = [...]string{
-	OpConst:        "Const",
-	OpTrue:         "True",
-	OpFalse:        "False",
-	OpPop:          "Pop",
-	OpAdd:          "Add",
-	OpSub:          "Sub",
-	OpMul:          "Mul",
-	OpDiv:          "Div",
-	OpRem:          "Rem",
-	OpNeg:          "Neg",
-	OpNot:          "Not",
-	OpEqual:        "Equal",
-	OpNotEqual:     "NotEqual",
-	OpLess:         "Less",
-	OpLessEqual:    "LessEqual",
-	OpGreater:      "Greater",
-	OpGreaterEqual: "GreaterEqual",
-	OpGetLocal:     "GetLocal",
-	OpSetLocal:     "SetLocal",
-	OpJump:         "Jump",
-	OpJumpIfFalse:  "JumpIfFalse",
-	OpCall:         "Call",
-	OpReturn:       "Return",
-	OpReturnVoid:   "ReturnVoid",
-	OpPrint:        "Print",
-	OpMakeArray:    "MakeArray",
-	OpIndex:        "Index",
-	OpSetIndex:     "SetIndex",
-	OpLen:          "Len",
+	OpConst:         "Const",
+	OpTrue:          "True",
+	OpFalse:         "False",
+	OpPop:           "Pop",
+	OpAdd:           "Add",
+	OpSub:           "Sub",
+	OpMul:           "Mul",
+	OpDiv:           "Div",
+	OpRem:           "Rem",
+	OpNeg:           "Neg",
+	OpNot:           "Not",
+	OpEqual:         "Equal",
+	OpNotEqual:      "NotEqual",
+	OpLess:          "Less",
+	OpLessEqual:     "LessEqual",
+	OpGreater:       "Greater",
+	OpGreaterEqual:  "GreaterEqual",
+	OpGetLocal:      "GetLocal",
+	OpSetLocal:      "SetLocal",
+	OpJump:          "Jump",
+	OpJumpIfFalse:   "JumpIfFalse",
+	OpCall:          "Call",
+	OpReturn:        "Return",
+	OpReturnVoid:    "ReturnVoid",
+	OpMissingReturn: "MissingReturn",
+	OpPrint:         "Print",
+	OpMakeArray:     "MakeArray",
+	OpIndex:         "Index",
+	OpSetIndex:      "SetIndex",
+	OpLen:           "Len",
 }
 
 // String returns the opcode's mnemonic.

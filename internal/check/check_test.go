@@ -131,3 +131,77 @@ func TestCheckUndefinedStillErrors(t *testing.T) {
 import "geometry"
 func main() { print(nope.Area(3, 4)) }`, "undefined: nope")
 }
+
+// The tests below lock the four leniency gaps closed in the checker-soundness
+// audit. Each program is one chip run (the streaming checker) rejects, so chip
+// check (the batch checker) must reject it too: the invariant is that chip check
+// is never more lenient than chip run. The operator, termination, and main-
+// signature rules are shared with the streaming checker via internal/typerules,
+// so these tests also guard the shared rules against drift.
+
+// Bitwise and shift operators parse but are not part of the language chip runs.
+// The batch checker once routed them through a default arm that returned int,
+// silently accepting them; now it rejects every one, as the streaming checker
+// and the executor do.
+func TestBitwiseOperatorsRejected(t *testing.T) {
+	for _, op := range []string{"&", "|", "^", "<<", ">>", "&^"} {
+		src := "package main\nfunc main() {\n    x := 1 " + op + " 2\n    print(x)\n}"
+		wantErr(t, src, "is not supported")
+	}
+}
+
+// A bare function name used as a value (not called) is rejected. The batch
+// checker once returned the function's signature here, which read as the invalid
+// type and was quietly swallowed by callers; the streaming checker rejects it.
+func TestFunctionAsValueRejected(t *testing.T) {
+	wantErr(t, `package main
+func f() int { return 1 }
+func main() { print(f) }`, "f is not a value")
+}
+
+// A builtin is not a value either: print and len may only be called. (This
+// behavior predates the audit; the test guards it across the checkCall refactor
+// that routes builtin and function callees away from the value path.)
+func TestBuiltinAsValueRejected(t *testing.T) {
+	wantErr(t, `package main
+func main() { print(len) }`, "len is not a value")
+}
+
+// A direct call to a function still checks clean — routing callees away from the
+// value path must not break ordinary calls.
+func TestFunctionCallStillOK(t *testing.T) {
+	mustCheck(t, `package main
+func add(a int, b int) int { return a + b }
+func main() { print(add(2, 3)) }`)
+}
+
+// main must take no arguments. The streaming checker rejects a parameterized
+// main; the batch checker did not, and now does.
+func TestMainWithArgsRejected(t *testing.T) {
+	wantErr(t, `package main
+func main(x int) { print(x) }`, "main must take no arguments")
+}
+
+// A function with a declared result that can fall off the end is rejected at its
+// closing brace. This was previously left to the linter and the streaming
+// checker; the batch checker now enforces it, with the same message.
+func TestMissingReturnRejected(t *testing.T) {
+	wantErr(t, `package main
+func f() int {
+    print(1)
+}
+func main() { print(f()) }`, "missing return at end of function f")
+}
+
+// A function that returns on every path checks clean — the missing-return rule
+// must not over-reject a well-formed function.
+func TestTerminatingFunctionOK(t *testing.T) {
+	mustCheck(t, `package main
+func pick(x int) int {
+    if x > 0 {
+        return 1
+    }
+    return 0
+}
+func main() { print(pick(1)) }`)
+}

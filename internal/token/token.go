@@ -5,7 +5,8 @@ package token
 type Token struct {
 	Type Type   // token type
 	lit  string // literal string value, e.g. "23.2"
-	pos  Pos    // postion in the source file
+	pos  Pos    // position of the token's first character
+	end  Pos    // position one past the token's last character
 }
 
 // Pos describes a tokens position in a source file.
@@ -13,16 +14,17 @@ type Token struct {
 type Pos struct {
 	Line   int // line number, starting at 1
 	Column int // column number, starting at 1 (character count per line)
+	Offset int // 0-based byte offset from the start of the source
 }
 
 // New creates a new Token.
 func New(typ Type, lit string, pos Pos) Token {
-	return Token{typ, lit, pos}
+	return Token{Type: typ, lit: lit, pos: pos}
 }
 
 // NewEOF returns an EOF Token.
 func NewEOF() Token {
-	return New(EOF, "EOF", Pos{0, 0})
+	return New(EOF, "EOF", Pos{})
 }
 
 // String impliments the fmt.Stringer interface.
@@ -45,9 +47,28 @@ func (t Token) Column() int {
 	return t.pos.Column
 }
 
+// Offset returns the Token's 0-based byte offset in the source file.
+func (t Token) Offset() int {
+	return t.pos.Offset
+}
+
 // Pos returns the Token's position in the source file.
 func (t Token) Pos() Pos {
 	return t.pos
+}
+
+// End returns the position one past the token's last character, so the
+// half-open byte range [Pos().Offset, End().Offset) is the token's exact span.
+// The scanner records it via WithEnd; tokens built elsewhere have the zero Pos.
+func (t Token) End() Pos {
+	return t.end
+}
+
+// WithEnd returns a copy of t with its end position set. The scanner uses this
+// to record a token's byte-exact span; other callers read End instead.
+func (t Token) WithEnd(end Pos) Token {
+	t.end = end
+	return t
 }
 
 // Valid validates a Token.

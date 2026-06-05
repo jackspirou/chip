@@ -4,6 +4,7 @@ import (
 	"github.com/jackspirou/chip/internal/ast"
 	"github.com/jackspirou/chip/internal/scope"
 	"github.com/jackspirou/chip/internal/token"
+	"github.com/jackspirou/chip/internal/typerules"
 	"github.com/jackspirou/chip/internal/types"
 )
 
@@ -51,11 +52,19 @@ func (c *Checker) checkExpr0(e ast.Expr) types.Type {
 func (c *Checker) checkIdent(e *ast.Ident) types.Type {
 	sym := c.lookup(e.Name)
 	if sym == nil {
-		c.errorf(e.Pos(), "undefined: %s", e.Name)
+		c.undefinedIdent(e)
 		return types.Invalid
 	}
 	c.info.Uses[e] = sym
-	if sym.Kind == scope.Builtin {
+	// A name reaching here is in value position: a call resolves its callee in
+	// checkCall before this point, so a builtin or function seen here is being
+	// used as a value, which chip does not allow (it has neither first-class
+	// builtins nor first-class functions). The streaming checker (chip run)
+	// rejects the same misuse; rejecting it here keeps chip check from being more
+	// lenient than chip run. Without this, a bare function name read as its
+	// signature, which isInvalid then quietly swallowed.
+	switch sym.Kind {
+	case scope.Builtin, scope.Func:
 		c.errorf(e.Pos(), "%s is not a value", e.Name)
 		return types.Invalid
 	}
@@ -67,26 +76,23 @@ func (c *Checker) checkUnary(e *ast.UnaryExpr) types.Type {
 	if isInvalid(t) {
 		return types.Invalid
 	}
-	switch e.Op {
-	case token.ADD, token.SUB:
-		if !isNumeric(t) {
-			c.errorf(e.OpPos, "operator %s requires a numeric operand, got %s", e.Op, t)
-			return types.Invalid
-		}
-		return t
-	case token.NOT:
-		if !isBool(t) {
-			c.errorf(e.OpPos, "operator ! requires a bool operand, got %s", t)
-		}
-		return types.Bool
+	// The operator rule is shared with the streaming checker via typerules, so an
+	// operand the streaming checker rejects cannot pass here. Cascades from an
+	// already-invalid operand are suppressed above.
+	res, msg := typerules.Unary(e.Op, t)
+	if msg != "" {
+		c.errorf(e.OpPos, "%s", msg)
 	}
-	return types.Invalid
+	return res
 }
 
 func (c *Checker) checkBinary(e *ast.BinaryExpr) types.Type {
 	lt := c.checkExpr(e.Left)
 	rt := c.checkExpr(e.Right)
 
+	// Suppress cascades: an operand that already errored must not provoke a
+	// second, derived error. A comparison or logical expression still reads as a
+	// bool so an enclosing condition stays well-formed.
 	if isInvalid(lt) || isInvalid(rt) {
 		switch e.Op {
 		case token.LAND, token.LOR, token.EQL, token.NEQ,
@@ -96,53 +102,15 @@ func (c *Checker) checkBinary(e *ast.BinaryExpr) types.Type {
 		return types.Invalid
 	}
 
-	switch e.Op {
-	case token.LAND, token.LOR:
-		if !isBool(lt) || !isBool(rt) {
-			c.errorf(e.OpPos, "operator %s requires bool operands, got %s and %s", e.Op, lt, rt)
-		}
-		return types.Bool
-
-	case token.EQL, token.NEQ:
-		if !types.Identical(lt, rt) {
-			c.errorf(e.OpPos, "cannot compare %s and %s", lt, rt)
-		}
-		return types.Bool
-
-	case token.LSS, token.LEQ, token.GTR, token.GEQ:
-		if !types.Identical(lt, rt) || !isOrdered(lt) {
-			c.errorf(e.OpPos, "operator %s is not defined for %s and %s", e.Op, lt, rt)
-		}
-		return types.Bool
-
-	case token.ADD:
-		if !types.Identical(lt, rt) || (!isNumeric(lt) && !isString(lt)) {
-			c.errorf(e.OpPos, "operator + is not defined for %s and %s", lt, rt)
-			return types.Invalid
-		}
-		return lt
-
-	case token.SUB, token.MUL, token.QUO:
-		if !types.Identical(lt, rt) || !isNumeric(lt) {
-			c.errorf(e.OpPos, "operator %s is not defined for %s and %s", e.Op, lt, rt)
-			return types.Invalid
-		}
-		return lt
-
-	case token.REM:
-		if !isInt(lt) || !isInt(rt) {
-			c.errorf(e.OpPos, "operator %% requires int operands, got %s and %s", lt, rt)
-			return types.Invalid
-		}
-		return types.Int
-
-	default: // bitwise and shift operators
-		if !isInt(lt) || !isInt(rt) {
-			c.errorf(e.OpPos, "operator %s requires int operands, got %s and %s", e.Op, lt, rt)
-			return types.Invalid
-		}
-		return types.Int
+	// The operator rules are shared with the streaming checker via typerules, so
+	// chip check and chip run agree on exactly which operators and operand types
+	// are allowed (the bitwise and shift operators, for one, are rejected by
+	// both rather than silently accepted here).
+	res, msg := typerules.Binary(e.Op, lt, rt)
+	if msg != "" {
+		c.errorf(e.OpPos, "%s", msg)
 	}
+	return res
 }
 
 func (c *Checker) checkIndex(e *ast.IndexExpr) types.Type {
@@ -183,10 +151,23 @@ func (c *Checker) checkCompositeLit(e *ast.CompositeLit) types.Type {
 }
 
 func (c *Checker) checkCall(e *ast.CallExpr) types.Type {
+	// A callee that names a builtin or a function is resolved here, in call
+	// position. Routing it directly — rather than through checkExpr/checkIdent —
+	// lets checkIdent treat a bare function name as the value-position error it
+	// is, and records the use the compiler needs to find the callee.
 	if id, ok := e.Fn.(*ast.Ident); ok {
-		if sym := c.lookup(id.Name); sym != nil && sym.Kind == scope.Builtin {
-			c.info.Uses[id] = sym
-			return c.checkBuiltin(id.Name, e)
+		if sym := c.lookup(id.Name); sym != nil {
+			switch sym.Kind {
+			case scope.Builtin:
+				c.info.Uses[id] = sym
+				return c.checkBuiltin(id.Name, e)
+			case scope.Func:
+				c.info.Uses[id] = sym
+				if sig, ok := sym.Type.(*types.Signature); ok {
+					return c.checkCallSig(e, sig)
+				}
+				return types.Invalid // a Func symbol always carries a signature
+			}
 		}
 	}
 
@@ -201,7 +182,14 @@ func (c *Checker) checkCall(e *ast.CallExpr) types.Type {
 		}
 		return types.Invalid
 	}
+	return c.checkCallSig(e, sig)
+}
 
+// checkCallSig checks a call's argument count and types against a resolved
+// signature and returns the call's result type. It is shared by the two callee
+// shapes — a name that resolves to a function, and any other expression of
+// function type — so both agree on argument checking.
+func (c *Checker) checkCallSig(e *ast.CallExpr, sig *types.Signature) types.Type {
 	if len(e.Args) != len(sig.Params) {
 		c.errorf(e.Lparen, "wrong number of arguments: got %d, want %d", len(e.Args), len(sig.Params))
 	}

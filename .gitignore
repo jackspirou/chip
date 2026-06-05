@@ -2,6 +2,9 @@
 /chip
 *.exe
 
+# GoReleaser release artifacts
+/dist/
+
 # Test and coverage output
 *.test
 *.out

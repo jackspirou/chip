@@ -15,7 +15,8 @@ func (p *Parser) parseFile() *ast.File {
 
 	for p.tok.Type != token.EOF {
 		start := p.nadv
-		switch item := p.parseTopLevel().(type) {
+		node, bailed := p.parseTopLevelSafe()
+		switch item := node.(type) {
 		case ast.Decl:
 			file.Decls = append(file.Decls, item)
 		case ast.Stmt:
@@ -23,6 +24,13 @@ func (p *Parser) parseFile() *ast.File {
 		}
 		if p.nadv == start {
 			p.next() // skip an unexpected token to make progress
+		}
+		if bailed {
+			// Nesting too deep: stop rather than re-erroring on every leftover
+			// token. Errors collected from earlier items are preserved (this
+			// breaks only on the depth bailout, not on ordinary parse errors, so
+			// collect-all is unaffected for well-formed-enough input).
+			break
 		}
 	}
 	file.Comments = p.comments

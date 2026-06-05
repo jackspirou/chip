@@ -1,0 +1,59 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  goreleaser:
+    name: goreleaser
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub Release and upload assets
+      id-token: write # keyless Sigstore signing for provenance
+      attestations: write # record build-provenance attestations
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # full history + tags for the changelog and version
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Vulnerability scan
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Smoke-test the built binary
+        run: |
+          set -eu
+          bin=$(find dist -type f -name chip -path '*linux_amd64*' | head -1)
+          test -n "$bin" || { echo "no linux/amd64 chip binary under dist/"; exit 1; }
+          "$bin" version
+          "$bin" version --json
+          out=$("$bin" run examples/hello.chp)
+          echo "run examples/hello.chp -> $out"
+          test "$out" = "Hello, chip" || { echo "unexpected output"; exit 1; }
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
+        with:
+          subject-checksums: dist/checksums.txt

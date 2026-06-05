@@ -48,8 +48,15 @@ func (c *Checker) checkDecl(s *ast.DeclStmt) {
 	}
 	sym := &scope.Symbol{Name: s.Name.Name, Kind: scope.Var, Type: t, DeclPos: s.Name.Pos()}
 	if s.Name.Name != "" {
-		if prev := c.scope.Insert(sym); prev != nil {
-			c.errorf(s.Name.Pos(), "%s redeclared in this block", s.Name.Name)
+		switch {
+		case c.scope == c.file:
+			// Top-level bindings may be redefined (matching the streaming runtime
+			// and the REPL), so a repeat := overwrites rather than conflicting.
+			c.scope.Replace(sym)
+		default:
+			if prev := c.scope.Insert(sym); prev != nil {
+				c.errorf(s.Name.Pos(), "%s redeclared in this block", s.Name.Name)
+			}
 		}
 	}
 	c.info.Defs[s.Name] = sym
@@ -68,7 +75,7 @@ func (c *Checker) checkAssignTarget(e ast.Expr) types.Type {
 	case *ast.Ident:
 		sym := c.lookup(e.Name)
 		if sym == nil {
-			c.errorf(e.Pos(), "undefined: %s", e.Name)
+			c.undefinedIdent(e)
 			return types.Invalid
 		}
 		c.info.Uses[e] = sym

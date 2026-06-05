@@ -30,6 +30,11 @@ func (e *engine) execStmts(stmts []ast.Stmt, scope *env) (flow, value.Value, err
 
 // execStmt executes a single statement.
 func (e *engine) execStmt(s ast.Stmt, scope *env) (flow, value.Value, error) {
+	// Statement boundary: account one step and enforce the wall-clock/step caps
+	// (a no-op unless a cap is set). This is where a runaway run is stopped.
+	if err := e.step(s.Pos()); err != nil {
+		return flowNormal, value.Value{}, err
+	}
 	switch s := s.(type) {
 	case *ast.DeclStmt:
 		v, err := e.eval(s.Value, scope)
@@ -143,6 +148,11 @@ func (e *engine) execFor(s *ast.ForStmt, scope *env) (flow, value.Value, error) 
 	// it once: a body that declares nothing runs directly in scope.
 	declares := blockDeclares(s.Body.List)
 	for {
+		// Tick once per iteration too, so an empty-bodied or condition-only loop
+		// (which runs no inner statement to tick) is still capped and cancellable.
+		if err := e.step(s.Pos()); err != nil {
+			return flowNormal, value.Value{}, err
+		}
 		if s.Cond != nil {
 			cond, err := e.eval(s.Cond, scope)
 			if err != nil {
@@ -169,7 +179,7 @@ func (e *engine) execFor(s *ast.ForStmt, scope *env) (flow, value.Value, error) 
 // callFunc invokes fn with args in a fresh per-call scope (parent = global) and
 // returns its result. A function that falls off the end yields the zero value.
 func (e *engine) callFunc(fn *ast.FuncDecl, args []value.Value, pos token.Pos) (value.Value, error) {
-	if e.depth >= maxCallDepth {
+	if e.depth >= e.maxDepth {
 		return value.Value{}, e.errorf(pos, "call stack too deep")
 	}
 	if len(args) != len(fn.Params) {

@@ -45,6 +45,34 @@ func mustRun(t *testing.T, src string) string {
 	return out
 }
 
+// runUnchecked compiles and runs src without failing on a check error, so a
+// program the batch checker rejects still reaches the VM. The batch checker now
+// rejects a missing return (the termination rule is shared with chip run via
+// internal/typerules), so runProgram would stop at that error and never exercise
+// the VM's own trap. check.Check populates Info even when it returns an error, so
+// the compiler still has the type data it needs. This path stands in for an
+// embedding host that compiles without checking, or checks more leniently.
+func runUnchecked(src string) (string, error) {
+	p, err := parser.New(strings.NewReader(src))
+	if err != nil {
+		return "", err
+	}
+	f, err := p.Parse()
+	if err != nil {
+		return "", err
+	}
+	info, _ := check.Check(f) // ignore check errors on purpose; Info is still populated
+	prog, err := compiler.Compile(f, info)
+	if err != nil {
+		return "", err
+	}
+	var buf bytes.Buffer
+	if err := vm.Run(prog, &buf); err != nil {
+		return buf.String(), err
+	}
+	return buf.String(), nil
+}
+
 func TestArithmetic(t *testing.T) {
 	cases := map[string]string{
 		"func main() { print(1 + 10) }":      "11\n",
@@ -137,5 +165,88 @@ func TestDivideByZero(t *testing.T) {
 func main() { print(1 / 0) }`)
 	if err == nil || !strings.Contains(err.Error(), "division by zero") {
 		t.Fatalf("expected division by zero error, got %v", err)
+	}
+}
+
+// A function with a declared result that falls off the end without returning
+// must fault with a clean runtime error, never panic. Both checkers now reject a
+// missing return up front, so this drives the VM through runUnchecked — standing
+// in for an embedding host that compiles without checking. Before the
+// OpMissingReturn trap the caller popped a return value that was never pushed,
+// underflowing the stack and panicking the host with "index out of range [-1]".
+// A panic here crashes the test binary, so this also guards against regressing
+// the trap.
+func TestMissingReturnTrapsCleanly(t *testing.T) {
+	cases := map[string]string{
+		"fall through": `package main
+func main() { print(f()) }
+func f() int { print(1) }`,
+		"only one branch returns": `package main
+func main() { print(g(0)) }
+func g(x int) int {
+    if x > 0 {
+        return x
+    }
+}`,
+	}
+	for name, src := range cases {
+		t.Run(name, func(t *testing.T) {
+			_, err := runUnchecked(src)
+			if err == nil || !strings.Contains(err.Error(), "missing return") {
+				t.Fatalf("expected a missing-return runtime error, got %v", err)
+			}
+		})
+	}
+}
+
+// The arith and compare paths carry default arms for operand/operator pairs the
+// checker forbids: % on floats, a non-+ operator on strings, and ordering bools.
+// chip's own checker rejects all three, so they are unreachable through chip run
+// and chip.Compile; this drives them through runUnchecked, standing in for an
+// embedding host that compiled without checking. Each must fault with a clean
+// runtime error rather than silently push a wrong value — and, for float %,
+// rather than push nothing, underflow the operand stack, and panic the host.
+func TestVMArmsRejectCheckerImpossibleOps(t *testing.T) {
+	cases := []struct {
+		name string
+		src  string
+		want string // the operand-type the message must name
+	}{
+		{"float modulo", `package main
+func main() { print(1.0 % 2.0) }`, "for float"},
+		{"string subtraction", `package main
+func main() { print("a" - "b") }`, "for string"},
+		{"ordered bools", `package main
+func main() { print((1 < 2) < (3 < 4)) }`, "for bool"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := runUnchecked(tc.src)
+			if err == nil {
+				t.Fatalf("expected a runtime error, got none (out=%q)", out)
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("error = %q, want substring %q", err.Error(), tc.want)
+			}
+			if out != "" {
+				t.Errorf("output = %q, want empty (fault before print)", out)
+			}
+		})
+	}
+}
+
+// A function that does return on every path is unaffected: the trailing trap is
+// unreachable and the program runs normally.
+func TestResultFunctionReturnsNormally(t *testing.T) {
+	got := mustRun(t, `package main
+func main() { print(pick(1)) }
+func pick(x int) int {
+    if x > 0 {
+        return x
+    }
+    return 0
+}`)
+	if got != "1\n" {
+		t.Errorf("got %q, want %q", got, "1\n")
 	}
 }

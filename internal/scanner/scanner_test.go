@@ -73,6 +73,37 @@ func TestScanMultiline(t *testing.T) {
 	})
 }
 
+// TestScanCRLF locks the carriage-return fix: a "\r\n" break counts as one line,
+// exactly like "\n", so token line numbers match the LF source token for token.
+// Before the fix skipSpaces bumped the line on both the '\r' and the '\n', so yy
+// landed on line 3 and every later line drifted by the number of CRLFs scanned.
+// The expected tokens are TestScanMultiline's verbatim; only the terminator
+// differs, which is the whole point.
+func TestScanCRLF(t *testing.T) {
+	assertToks(t, "x := 1\r\n  yy = 22", []tok{
+		{token.IDENT, "x", 1, 1},
+		{token.DEFINE, ":=", 1, 3},
+		{token.INT, "1", 1, 6},
+		{token.IDENT, "yy", 2, 3},
+		{token.ASSIGN, "=", 2, 6},
+		{token.INT, "22", 2, 8},
+		{token.EOF, "EOF", 2, 10},
+	})
+}
+
+// TestScanMixedLineEndings checks that "\r\n", a lone "\r" (old-Mac), and a lone
+// "\n" each advance exactly one line and can be intermixed without drift — a blank
+// CRLF line included. Source: a, blank line, b, c, d on lines 1..5.
+func TestScanMixedLineEndings(t *testing.T) {
+	assertToks(t, "a\r\n\r\nb\rc\nd", []tok{
+		{token.IDENT, "a", 1, 1},
+		{token.IDENT, "b", 3, 1}, // after "\r\n\r\n": two breaks, not four
+		{token.IDENT, "c", 4, 1}, // after a lone '\r'
+		{token.IDENT, "d", 5, 1}, // after a lone '\n'
+		{token.EOF, "EOF", 5, 2},
+	})
+}
+
 func TestScanComparison(t *testing.T) {
 	assertToks(t, "a == b", []tok{
 		{token.IDENT, "a", 1, 1},

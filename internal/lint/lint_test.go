@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/jackspirou/chip/internal/check"
+	"github.com/jackspirou/chip/internal/diag"
 	"github.com/jackspirou/chip/internal/lint"
 	"github.com/jackspirou/chip/internal/parser"
 )
@@ -113,19 +114,6 @@ func helper() int { return 2 }`)
 	}
 }
 
-func TestLintMissingReturn(t *testing.T) {
-	issues := lintSrc(t, `package main
-func main() { print(f(0)) }
-func f(x int) int {
-    if x == 0 {
-        return 1
-    }
-}`)
-	if !hasIssue(issues, "missing return") {
-		t.Fatalf("expected missing return, got %v", issues)
-	}
-}
-
 func TestLintUnreachable(t *testing.T) {
 	issues := lintSrc(t, `package main
 func main() { print(f()) }
@@ -135,6 +123,53 @@ func f() int {
 }`)
 	if !hasIssue(issues, "unreachable code") {
 		t.Fatalf("expected unreachable code, got %v", issues)
+	}
+}
+
+// TestLintUnreachableCarriesMachineRepair checks that the unreachable-code issue
+// ships a machine-applicable removal: applying its edit deletes the dead tail and
+// leaves a clean, still-terminating function. This is the one lint fix `chip fix`
+// applies automatically (removing provably-dead code never changes behavior).
+func TestLintUnreachableCarriesMachineRepair(t *testing.T) {
+	src := `package main
+func main() { print(f()) }
+func f() int {
+    return 1
+    return 2
+}`
+	issues := lintSrc(t, src)
+
+	var found *lint.Issue
+	for i := range issues {
+		if issues[i].Msg == "unreachable code" {
+			found = &issues[i]
+			break
+		}
+	}
+	if found == nil {
+		t.Fatalf("no unreachable-code issue, got %v", issues)
+	}
+	if found.Suggestion == nil {
+		t.Fatal("unreachable issue carries no suggestion")
+	}
+	if found.Suggestion.Applicability != diag.Machine {
+		t.Errorf("applicability = %q, want machine", found.Suggestion.Applicability)
+	}
+	if found.Repair == nil || found.Repair.FixID != "unreachable" {
+		t.Errorf("repair = %+v, want FixID unreachable", found.Repair)
+	}
+
+	out, err := diag.ApplyEdits([]byte(src), found.Suggestion.Edit)
+	if err != nil {
+		t.Fatalf("ApplyEdits: %v", err)
+	}
+	want := `package main
+func main() { print(f()) }
+func f() int {
+    return 1
+}`
+	if string(out) != want {
+		t.Errorf("after fix:\n%q\nwant:\n%q", out, want)
 	}
 }
 

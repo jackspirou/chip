@@ -225,7 +225,7 @@ func BenchmarkStreamRun(b *testing.B) {
 	for _, p := range benchPrograms {
 		b.Run(p.name, func(b *testing.B) {
 			b.ReportAllocs()
-			for range b.N {
+			for b.Loop() {
 				if err := Run(strings.NewReader(p.src), io.Discard); err != nil {
 					b.Fatalf("Run(%s): %v", p.name, err)
 				}
@@ -251,7 +251,7 @@ func BenchmarkExamples(b *testing.B) {
 		}
 		b.Run(name, func(b *testing.B) {
 			b.ReportAllocs()
-			for range b.N {
+			for b.Loop() {
 				if err := Run(strings.NewReader(string(src)), io.Discard); err != nil {
 					b.Fatalf("Run(%s): %v", name, err)
 				}

@@ -29,8 +29,13 @@ func (p *Parser) parseBinaryExpr(minPrec int) ast.Expr {
 	}
 }
 
-// parseUnaryExpr parses a unary expression.
+// parseUnaryExpr parses a unary expression. It is the choke point for the whole
+// expression recursion cycle — parens, calls, indexes, composite-literal
+// elements, and array lengths all reach an operand through here — so the depth
+// guard here bounds every form of expression nesting (see maxDepth).
 func (p *Parser) parseUnaryExpr() ast.Expr {
+	p.enter()
+	defer p.leave()
 	switch p.tok.Type {
 	case token.ADD, token.SUB, token.NOT:
 		opPos := p.pos()
@@ -147,8 +152,12 @@ func (p *Parser) parseIndex(x ast.Expr) ast.Expr {
 	return &ast.IndexExpr{X: x, Lbrack: lbrack, Index: index, Rbrack: rbrack}
 }
 
-// parseArrayType parses []Elem or [Len]Elem.
+// parseArrayType parses []Elem or [Len]Elem. The element type recurses through
+// parseType back into parseArrayType for [][]...Elem, a nesting cycle that does
+// not pass through the expression choke point, so it carries its own depth guard.
 func (p *Parser) parseArrayType() ast.Expr {
+	p.enter()
+	defer p.leave()
 	lbrack := p.expect(token.LBRACK)
 	var length ast.Expr
 	if p.tok.Type != token.RBRACK {

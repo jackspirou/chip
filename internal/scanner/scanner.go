@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/jackspirou/chip/internal/reader"
 	"github.com/jackspirou/chip/internal/token"
@@ -31,8 +32,17 @@ func New(src io.Reader) (*Scanner, error) {
 	return s, nil
 }
 
-// Next returns the next token.Token in the source.
+// Next returns the next token.Token in the source, with its byte-exact span
+// recorded (see token.Token.End): End is the scanner position one past the
+// token's final byte, so End().Offset-Pos().Offset is the token's byte length.
 func (s *Scanner) Next() token.Token {
+	tok := s.scan()
+	return tok.WithEnd(s.pos)
+}
+
+// scan reads and returns the next token, positioned at its first character but
+// without an end position; Next wraps it to record that.
+func (s *Scanner) scan() token.Token {
 	// skip any blank spaces
 	if err := s.skipSpaces(); err != nil {
 		return token.New(token.ERROR, err.Error(), s.pos)
@@ -113,6 +123,13 @@ func (s *Scanner) next() error {
 		return fmt.Errorf("bug: expected EOF got '%c', error: %s", char, err)
 	}
 
+	// Advance the byte offset past the rune we are leaving (the old s.char),
+	// mirroring the per-rune Column increment below. The first advance (no rune
+	// loaded yet, s.char == 0) and EOF (-1) contribute no source bytes.
+	if s.char > 0 {
+		s.pos.Offset += utf8.RuneLen(s.char)
+	}
+
 	s.char = char
 	s.pos.Column++
 
@@ -121,10 +138,22 @@ func (s *Scanner) next() error {
 
 // skipSpaces skips all spaces until the next valid character.
 func (s *Scanner) skipSpaces() error {
+	// prevCR tracks whether the previous rune was a '\r', so a following '\n'
+	// (the second half of a "\r\n" pair) is not counted as a second line break.
+	prevCR := false
 	for whitespace(s.char) || endOfLine(s.char) {
 		if endOfLine(s.char) {
-			s.pos.Line++
+			// Treat "\n", a lone "\r", and "\r\n" each as a single line break.
+			// Reset the column for every line-terminator rune so the first rune of
+			// the next line lands at column 1, but bump the line only once per
+			// break: skip the bump for the '\n' that directly follows a '\r'.
+			if !(s.char == '\n' && prevCR) {
+				s.pos.Line++
+			}
 			s.pos.Column = 0
+			prevCR = s.char == '\r'
+		} else {
+			prevCR = false
 		}
 		if err := s.next(); err != nil {
 			return err
@@ -252,13 +281,19 @@ func (s *Scanner) nextString() token.Token {
 		return token.New(token.ERROR, err.Error(), s.pos)
 	}
 
-	for s.char != '"' && !endOfLine(s.char) {
+	for s.char != '"' && !endOfLine(s.char) && s.char != reader.EOF {
 		buffer.WriteRune(s.char)
 		if err := s.next(); err != nil {
 			return token.New(token.ERROR, err.Error(), s.pos)
 		}
 	}
 
+	// A string that hits a newline or EOF before its closing quote is
+	// unterminated. The EOF guard above is essential: without it the loop spins
+	// forever on s.char == reader.EOF (which is neither '"' nor a newline),
+	// appending U+FFFD each turn and growing the buffer without bound — a single
+	// unterminated literal at end of input would exhaust memory. Scanning runs
+	// ahead of the execution step loop, so --timeout/--max-steps cannot stop it.
 	if s.char != '"' {
 		return token.New(token.ERROR, "string has no closing quote", s.start)
 	}
@@ -439,6 +474,13 @@ func (s *Scanner) nextComment() token.Token {
 		}
 		for s.char != reader.EOF {
 			if ch == '*' && s.char == '/' {
+				// NOTE: the closing '/' is intentionally left unconsumed here to
+				// preserve the master run-path behavior byte-for-byte (plan A7):
+				// master emits this COMMENT (its span ending just before the '/')
+				// followed by a stray QUO '/' token, so an inline block comment
+				// like `/* x */ code` is a parse error. That is a latent scanner
+				// bug, but fixing it changes `chip run` output, so it is deferred
+				// to its own slice rather than smuggled into 3.0b's span work.
 				return token.New(token.COMMENT, buffer.String(), s.start)
 			}
 

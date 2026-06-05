@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -102,6 +103,25 @@ func (m mapLoader) Load(importPath string) ([]Source, error) {
 	}
 	return srcs, nil
 }
+
+// errImportsDisabled is what the deny loader returns for every import. load()
+// wraps it as `cannot import "PATH": imports are disabled`, so a refusal still
+// names the offending path and reads cleanly.
+var errImportsDisabled = errors.New("imports are disabled")
+
+// DenyLoader returns a Loader that refuses every import. It is what the CLI's
+// --no-imports installs and the recommended way to seal an embedded run off from
+// the host: the loader is chip's only host-access vector (there is no file,
+// network, or exec builtin), so a program run with one cannot reach the
+// filesystem. Bundled standard-library packages are resolved by the engine ahead
+// of any loader, so import "math" still works — only host/user packages are
+// refused. Pair it with the engine's no-prelude option (CLI --no-prelude) to also
+// drop the unqualified stdlib prelude.
+func DenyLoader() Loader { return denyLoader{} }
+
+type denyLoader struct{}
+
+func (denyLoader) Load(string) ([]Source, error) { return nil, errImportsDisabled }
 
 // pkgBaseName is the default reference name for an import path: its last path
 // element. It is the fallback when an imported file has no package clause.

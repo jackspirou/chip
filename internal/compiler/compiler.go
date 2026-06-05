@@ -81,7 +81,16 @@ func (c *Compiler) compileFunc(fn *ast.FuncDecl) *code.FuncProto {
 	for _, s := range fn.Body.List {
 		c.compileStmt(s)
 	}
-	c.emit(code.OpReturnVoid, 0, fn.Body.Rbrace) // safety net for fall-through
+	// Safety net for control reaching the end of the body. A void function
+	// simply returns; a function with a declared result that falls through here
+	// never produced its return value, so trap with a clean runtime error rather
+	// than let the caller underflow the operand stack (which panics the host).
+	// When the function always returns, this trailing instruction is unreachable.
+	if len(fn.Results) > 0 {
+		c.emit(code.OpMissingReturn, 0, fn.Body.Rbrace)
+	} else {
+		c.emit(code.OpReturnVoid, 0, fn.Body.Rbrace)
+	}
 
 	return &code.FuncProto{
 		Name:      fn.Name.Name,

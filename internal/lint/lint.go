@@ -1,6 +1,8 @@
 // Package lint reports style and correctness issues that the type checker does
-// not treat as hard errors: unused variables and functions, missing returns,
-// and unreachable code.
+// not treat as hard errors: unused variables and functions, unused imports,
+// functions used before definition, and unreachable code. A missing return is
+// a hard error in both checkers (it is enforced via internal/typerules), so it
+// is not a lint finding.
 package lint
 
 import (
@@ -10,14 +12,21 @@ import (
 
 	"github.com/jackspirou/chip/internal/ast"
 	"github.com/jackspirou/chip/internal/check"
+	"github.com/jackspirou/chip/internal/diag"
 	"github.com/jackspirou/chip/internal/scope"
 	"github.com/jackspirou/chip/internal/token"
+	"github.com/jackspirou/chip/internal/typerules"
 )
 
-// Issue is a single lint finding.
+// Issue is a single lint finding. Most issues are advisory only (Pos + Msg); a
+// few carry a machine-applicable repair (Suggestion + Repair) that `chip fix`
+// can apply without guessing — currently only unreachable-code removal, which is
+// unconditionally behavior-preserving.
 type Issue struct {
-	Pos token.Pos
-	Msg string
+	Pos        token.Pos
+	Msg        string
+	Suggestion *diag.Suggestion
+	Repair     *diag.Repair
 }
 
 func (i Issue) Error() string {
@@ -46,6 +55,32 @@ func (l IssueList) Err() error {
 	return l
 }
 
+// Diagnostics renders the list as structured diagnostics: every lint finding is
+// a warning in the lint phase (blocking only under --strict). It implements
+// diag.Diagnoser so the renderers can present findings without type-switching.
+func (l IssueList) Diagnostics() []diag.Diagnostic {
+	ds := make([]diag.Diagnostic, len(l))
+	for i, issue := range l {
+		d := diag.Diagnostic{
+			Severity: diag.SeverityWarning,
+			Phase:    diag.PhaseLint,
+			Message:  issue.Msg,
+			Primary: diag.Primary{
+				IsPrimary: true,
+				Line:      issue.Pos.Line,
+				Column:    issue.Pos.Column,
+				Offset:    issue.Pos.Offset,
+			},
+			Repair: issue.Repair,
+		}
+		if issue.Suggestion != nil {
+			d.Suggestions = []diag.Suggestion{*issue.Suggestion}
+		}
+		ds[i] = d
+	}
+	return ds
+}
+
 // Lint analyzes a type-checked file and returns any issues, sorted by position.
 func Lint(file *ast.File, info *check.Info) IssueList {
 	l := &linter{info: info}
@@ -70,6 +105,12 @@ type linter struct {
 
 func (l *linter) add(pos token.Pos, format string, args ...any) {
 	l.issues = append(l.issues, Issue{Pos: pos, Msg: fmt.Sprintf(format, args...)})
+}
+
+// addRepair records an issue that carries a machine-applicable fix. The caret
+// stays at pos (where the problem is); the edits say how to remove it.
+func (l *linter) addRepair(pos token.Pos, sug diag.Suggestion, rep diag.Repair, msg string) {
+	l.issues = append(l.issues, Issue{Pos: pos, Msg: msg, Suggestion: &sug, Repair: &rep})
 }
 
 //
@@ -260,17 +301,17 @@ func posBefore(a, b token.Pos) bool {
 }
 
 //
-// control flow: missing return and unreachable code
+// control flow: unreachable code
 //
 
+// checkFlow reports unreachable code. Missing returns are not reported here:
+// both checkers reject them as hard errors (chip lint only runs after chip
+// check passes), so a lint warning would be unreachable and redundant.
 func (l *linter) checkFlow(file *ast.File) {
 	for _, d := range file.Decls {
 		fn, ok := d.(*ast.FuncDecl)
 		if !ok {
 			continue
-		}
-		if len(fn.Results) > 0 && !terminates(fn.Body.List) {
-			l.add(fn.Body.Rbrace, "missing return at end of function %s", fn.Name.Name)
 		}
 		l.checkUnreachable(fn.Body)
 	}
@@ -282,8 +323,29 @@ func (l *linter) checkUnreachable(b *ast.Block) {
 	}
 	flagged := false
 	for i, s := range b.List {
-		if !flagged && i+1 < len(b.List) && terminatesStmt(s) {
-			l.add(b.List[i+1].Pos(), "unreachable code")
+		if !flagged && i+1 < len(b.List) && typerules.TerminatesStmt(s) {
+			// The caret points at the first dead statement, but the repair
+			// removes the whole dead tail: from the end of the terminator
+			// through the end of the last statement in the block. Splicing out
+			// [terminator.End, lastDead.End) takes the intervening newline and
+			// indentation with it, leaving the terminator and closing brace
+			// clean. Removing provably-dead code never changes behavior, so the
+			// edit is Machine-applicable.
+			dead := diag.Edit{
+				Offset:    s.End().Offset,
+				EndOffset: b.List[len(b.List)-1].End().Offset,
+				NewText:   "",
+			}
+			l.addRepair(
+				b.List[i+1].Pos(),
+				diag.Suggestion{
+					Message:       "remove unreachable code",
+					Applicability: diag.Machine,
+					Edit:          []diag.Edit{dead},
+				},
+				diag.Repair{ID: "unreachable", FixID: "unreachable"},
+				"unreachable code",
+			)
 			flagged = true
 		}
 		l.unreachableInStmt(s)
@@ -300,31 +362,5 @@ func (l *linter) unreachableInStmt(s ast.Stmt) {
 		l.checkUnreachable(s.Body)
 	case *ast.Block:
 		l.checkUnreachable(s)
-	}
-}
-
-// terminates reports whether a statement list always transfers control away
-// (returns, or loops forever) so control never falls off the end.
-func terminates(list []ast.Stmt) bool {
-	for _, s := range list {
-		if terminatesStmt(s) {
-			return true
-		}
-	}
-	return false
-}
-
-func terminatesStmt(s ast.Stmt) bool {
-	switch s := s.(type) {
-	case *ast.ReturnStmt:
-		return true
-	case *ast.IfStmt:
-		return s.Else != nil && terminates(s.Body.List) && terminatesStmt(s.Else)
-	case *ast.Block:
-		return terminates(s.List)
-	case *ast.ForStmt:
-		return s.Cond == nil // an infinite loop never falls through (chip has no break)
-	default:
-		return false
 	}
 }

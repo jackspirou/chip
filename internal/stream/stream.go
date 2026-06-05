@@ -24,6 +24,7 @@ package stream
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"iter"
@@ -32,6 +33,7 @@ import (
 	"strings"
 
 	"github.com/jackspirou/chip/internal/ast"
+	"github.com/jackspirou/chip/internal/diag"
 	"github.com/jackspirou/chip/internal/parser"
 	"github.com/jackspirou/chip/internal/std"
 	"github.com/jackspirou/chip/internal/token"
@@ -62,11 +64,43 @@ func RunFile(path string, out io.Writer) error {
 
 // RunWithLoader streams chip source from src like Run, resolving imports through
 // loader. It is the seam used by tests (with an in-memory loader) and by the
-// path-based entry points.
+// path-based entry points. It imposes no resource caps; RunWithLimits adds them.
 func RunWithLoader(src io.Reader, out io.Writer, loader Loader) error {
+	return RunWithLimits(context.Background(), src, out, loader, Limits{})
+}
+
+// RunWithLimits streams chip source from src like RunWithLoader while enforcing
+// resource caps (plan §4.1): ctx cancellation imposes a wall-clock timeout, and
+// lim bounds interpreter steps, output bytes, and call depth. Caps are
+// cooperative — the single goroutine checks them at statement boundaries and on
+// output — so --max-steps is deterministic for a given program. A ctx with no
+// deadline and a zero Limits impose no caps, which is exactly what RunWithLoader
+// passes, so the default run path is unchanged.
+func RunWithLimits(ctx context.Context, src io.Reader, out io.Writer, loader Loader, lim Limits) error {
+	return runStream(ctx, src, out, loader, lim, false)
+}
+
+// RunSealed streams chip source like RunWithLimits but for hermetic execution of
+// untrusted code (plan §4.2): when noPrelude is set the unqualified stdlib
+// prelude is not loaded, so a program sees only the builtins (print, len) and
+// whatever it defines. Pass a DenyLoader as loader to additionally refuse host
+// imports (bundled stdlib packages resolve regardless). With noPrelude false and
+// a DirLoader it is exactly RunWithLimits, so the default run path is unchanged.
+func RunSealed(ctx context.Context, src io.Reader, out io.Writer, loader Loader, lim Limits, noPrelude bool) error {
+	return runStream(ctx, src, out, loader, lim, noPrelude)
+}
+
+// runStream is the shared body of the streaming run entry points: build the
+// engine, apply caps, load the prelude unless sealed, feed the source, then run
+// main. Keeping one body means RunWithLimits and RunSealed cannot drift, and the
+// only difference a sealed run makes is skipping loadStd.
+func runStream(ctx context.Context, src io.Reader, out io.Writer, loader Loader, lim Limits, noPrelude bool) error {
 	e := newEngine(out, loader)
-	if err := e.loadStd(); err != nil {
-		return err
+	e.applyLimits(ctx, lim)
+	if !noPrelude {
+		if err := e.loadStd(); err != nil {
+			return err
+		}
 	}
 	if err := e.feed(src); err != nil {
 		return err
@@ -143,6 +177,16 @@ type engine struct {
 	depth      int             // current call depth (recursion guard)
 	streamDone bool            // the current stream reached EOF (no more read-ahead)
 	printBuf   []byte          // reused scratch for building a print line (callPrint)
+
+	// Resource caps (plan §4.1), enforced cooperatively so a single-goroutine run
+	// stays deterministic for --max-steps. A zero budget means "no cap"; the hot
+	// path pays nothing when none are set (see step/emit and applyLimits).
+	ctx      context.Context // wall-clock cancellation (--timeout); nil unless a deadline is set
+	steps    int64           // interpreter steps executed so far
+	maxSteps int64           // step budget (--max-steps); 0 = unlimited
+	outBytes int64           // bytes written to out so far (--max-output accounting)
+	maxOut   int64           // output budget in bytes (--max-output); 0 = unlimited
+	maxDepth int             // call-depth limit (--max-depth); defaults to maxCallDepth
 }
 
 func newEngine(out io.Writer, loader Loader) *engine {
@@ -150,13 +194,14 @@ func newEngine(out io.Writer, loader Loader) *engine {
 		out: out,
 		// Resolve chip's built-in stdlib packages ahead of the given loader, so
 		// import "math" works on every run path (files, embedding, REPL, tests).
-		loader:  stdLoader{user: loader},
-		sigs:    make(map[*ast.FuncDecl]*types.Signature),
-		checked: make(map[*ast.FuncDecl]bool),
-		entry:   newPkg("main"),
-		prelude: newPkg("std"),
-		loaded:  make(map[string]*pkg),
-		loading: make(map[string]bool),
+		loader:   stdLoader{user: loader},
+		sigs:     make(map[*ast.FuncDecl]*types.Signature),
+		checked:  make(map[*ast.FuncDecl]bool),
+		entry:    newPkg("main"),
+		prelude:  newPkg("std"),
+		loaded:   make(map[string]*pkg),
+		loading:  make(map[string]bool),
+		maxDepth: maxCallDepth,
 	}
 	e.cur = e.entry
 	return e
@@ -433,6 +478,23 @@ type RuntimeError struct {
 
 func (e RuntimeError) Error() string {
 	return fmt.Sprintf("%d:%d: %s", e.Pos.Line, e.Pos.Column, e.Msg)
+}
+
+// Diagnostics renders the error as a single structured diagnostic in the runtime
+// phase. It implements diag.Diagnoser so the renderers can present a runtime
+// fault without type-switching.
+func (e RuntimeError) Diagnostics() []diag.Diagnostic {
+	return []diag.Diagnostic{{
+		Severity: diag.SeverityError,
+		Phase:    diag.PhaseRuntime,
+		Message:  e.Msg,
+		Primary: diag.Primary{
+			IsPrimary: true,
+			Line:      e.Pos.Line,
+			Column:    e.Pos.Column,
+			Offset:    e.Pos.Offset,
+		},
+	}}
 }
 
 // errorf builds a positioned RuntimeError.

@@ -1,0 +1,89 @@
+# GoReleaser configuration for chip.
+#
+# Local snapshot (no publish, no tag needed):
+#   HOMEBREW_TAP_TOKEN=dummy goreleaser release --snapshot --clean --skip=publish
+# Validate:
+#   goreleaser check
+#
+# Releases are cut by .github/workflows/release.yml on a pushed v* tag. Docker /
+# ghcr images are the one D25 channel not yet wired here (a deliberate follow-up).
+version: 2
+
+project_name: chip
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: chip
+    main: ./cmd/chip
+    binary: chip
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+      - -X main.commit={{ .FullCommit }}
+      - -X main.date={{ .CommitDate }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: chip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - LICENSE
+      - README*
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+sboms:
+  - id: archive
+    artifacts: archive
+
+homebrew_casks:
+  - name: chip
+    repository:
+      owner: jackspirou
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: "https://github.com/jackspirou/chip"
+    description: "A streaming scripting language and bytecode VM, in pure Go"
+    license: "MIT"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+
+release:
+  github:
+    owner: jackspirou
+    name: chip
+  draft: false
+  prerelease: auto
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "Merge pull request"

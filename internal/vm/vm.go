@@ -106,7 +106,9 @@ func (m *vm) run() error {
 		case code.OpNot:
 			m.push(value.Bool(!m.pop().AsBool()))
 		case code.OpEqual, code.OpNotEqual, code.OpLess, code.OpLessEqual, code.OpGreater, code.OpGreaterEqual:
-			m.compare(inst.Op)
+			if err := m.compare(inst.Op, fr); err != nil {
+				return err
+			}
 		case code.OpGetLocal:
 			m.push(fr.locals[inst.Operand])
 		case code.OpSetLocal:
@@ -128,6 +130,12 @@ func (m *vm) run() error {
 			m.push(result)
 		case code.OpReturnVoid:
 			m.popFrame()
+		case code.OpMissingReturn:
+			// A function with a declared result reached the end of its body
+			// without returning. Reporting a clean runtime error here keeps the
+			// caller from popping a return value that was never pushed, which
+			// would underflow the stack and panic the embedding host.
+			return m.runtimeErr(fr, "missing return at end of function %s", fr.proto.Name)
 		case code.OpPrint:
 			m.doPrint(inst.Operand)
 		case code.OpMakeArray:
@@ -176,7 +184,11 @@ func (m *vm) arith(op code.Opcode, fr *frame) error {
 
 	switch {
 	case a.Kind == value.KindString || b.Kind == value.KindString:
-		// Only + reaches strings; the checker guarantees this.
+		// The checker allows only + on strings; guard the rest so a lenient
+		// embedding host cannot turn string subtraction into silent concatenation.
+		if op != code.OpAdd {
+			return m.runtimeErr(fr, "operator %s is not defined for string", op)
+		}
 		m.push(value.Str(a.AsStr() + b.AsStr()))
 	case a.Kind == value.KindFloat || b.Kind == value.KindFloat:
 		x, y := a.AsFloat(), b.AsFloat()
@@ -192,6 +204,9 @@ func (m *vm) arith(op code.Opcode, fr *frame) error {
 				return m.runtimeErr(fr, "division by zero")
 			}
 			m.push(value.Float(x / y))
+		default:
+			// % is the one arithmetic operator the checker forbids on floats.
+			return m.runtimeErr(fr, "operator %s is not defined for float", op)
 		}
 	default:
 		x, y := a.AsInt(), b.AsInt()
@@ -212,12 +227,14 @@ func (m *vm) arith(op code.Opcode, fr *frame) error {
 				return m.runtimeErr(fr, "division by zero")
 			}
 			m.push(value.Int(x % y))
+		default:
+			return m.runtimeErr(fr, "operator %s is not defined for int", op)
 		}
 	}
 	return nil
 }
 
-func (m *vm) compare(op code.Opcode) {
+func (m *vm) compare(op code.Opcode, fr *frame) error {
 	b := m.pop()
 	a := m.pop()
 	var res bool
@@ -227,16 +244,21 @@ func (m *vm) compare(op code.Opcode) {
 	case a.Kind == value.KindFloat || b.Kind == value.KindFloat:
 		res = ordered(op, a.AsFloat(), b.AsFloat())
 	case a.Kind == value.KindBool || b.Kind == value.KindBool:
+		// Booleans support only == and !=; the checker rejects ordering them, so
+		// fail cleanly rather than push a default-false result if one slips through.
 		switch op {
 		case code.OpEqual:
 			res = a.AsBool() == b.AsBool()
 		case code.OpNotEqual:
 			res = a.AsBool() != b.AsBool()
+		default:
+			return m.runtimeErr(fr, "operator %s is not defined for bool", op)
 		}
 	default:
 		res = ordered(op, a.AsInt(), b.AsInt())
 	}
 	m.push(value.Bool(res))
+	return nil
 }
 
 // ordered evaluates a comparison opcode over any ordered operand type.
