@@ -48,8 +48,8 @@ func (c *Checker) checkDecl(s *ast.DeclStmt) {
 	}
 	sym := &scope.Symbol{Name: s.Name.Name, Kind: scope.Var, Type: t, DeclPos: s.Name.Pos()}
 	if s.Name.Name != "" {
-		switch {
-		case c.scope == c.file:
+		switch c.scope {
+		case c.file:
 			// Top-level bindings may be redefined (matching the streaming runtime
 			// and the REPL), so a repeat := overwrites rather than conflicting.
 			c.scope.Replace(sym)

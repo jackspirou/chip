@@ -202,7 +202,7 @@ func cmdRun(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	}
 	// --no-imports seals the only host-access vector by swapping the filesystem
 	// loader for one that refuses every import; bundled stdlib still resolves.
-	var loader stream.Loader = stream.DirLoader(sourceDir(path))
+	loader := stream.DirLoader(sourceDir(path))
 	if cfg.noImports {
 		loader = stream.DenyLoader()
 	}
@@ -513,9 +513,9 @@ func cmdCheck(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 			Diagnostics:        ds,
 			SuppressedCascades: rep.SuppressedCascades,
 		}
-		diag.MarshalResult(stderr, &res, source)
+		_ = diag.MarshalResult(stderr, &res, source)
 	} else {
-		renderer.Render(stderr, source, ds)
+		_ = renderer.Render(stderr, source, ds)
 		if rep.SuppressedCascades > 0 {
 			noun := "errors"
 			if rep.SuppressedCascades == 1 {
@@ -801,7 +801,7 @@ func lintDiagnostics(src []byte) []diag.Diagnostic {
 // example a plain I/O error) falls back to "filename: err".
 func report(w io.Writer, r diag.Renderer, filename string, src []byte, err error) {
 	if ds := diag.From(err); len(ds) > 0 {
-		r.Render(w, diag.Source{Name: filename, Bytes: src}, diag.WithCodes(ds))
+		_ = r.Render(w, diag.Source{Name: filename, Bytes: src}, diag.WithCodes(ds))
 		return
 	}
 	fmt.Fprintf(w, "%s: %s\n", filename, err)

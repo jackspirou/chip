@@ -147,7 +147,7 @@ func (s *Scanner) skipSpaces() error {
 			// Reset the column for every line-terminator rune so the first rune of
 			// the next line lands at column 1, but bump the line only once per
 			// break: skip the bump for the '\n' that directly follows a '\r'.
-			if !(s.char == '\n' && prevCR) {
+			if s.char != '\n' || !prevCR {
 				s.pos.Line++
 			}
 			s.pos.Column = 0

@@ -27,7 +27,7 @@ func TestAnthropicModelAgainstFakeServer(t *testing.T) {
 		b, _ := io.ReadAll(r.Body)
 		gotBody = string(b)
 		w.Header().Set("content-type", "application/json")
-		io.WriteString(w, `{"content":[{"type":"text","text":"fixed source"}],"usage":{"input_tokens":12,"output_tokens":7}}`)
+		_, _ = io.WriteString(w, `{"content":[{"type":"text","text":"fixed source"}],"usage":{"input_tokens":12,"output_tokens":7}}`)
 	}))
 	defer srv.Close()
 

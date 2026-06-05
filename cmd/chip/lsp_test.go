@@ -25,7 +25,7 @@ func TestLspPublishesDiagnosticsMatchingCheck(t *testing.T) {
 
 	// Ground truth: the diagnostics `chip check --json` reports for this source.
 	var checkOut, checkErr bytes.Buffer
-	run([]string{"check", "--json", "-e", src}, nil, &checkOut, &checkErr)
+	_ = run([]string{"check", "--json", "-e", src}, nil, &checkOut, &checkErr)
 	var want diag.Result
 	if err := json.Unmarshal(checkErr.Bytes(), &want); err != nil {
 		t.Fatalf("check --json did not produce the JSON envelope: %v\n%s", err, checkErr.String())

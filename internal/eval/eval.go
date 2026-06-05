@@ -205,7 +205,7 @@ func render(p Profile, src string, ds []diag.Diagnostic) string {
 		return ""
 	}
 	var buf bytes.Buffer
-	rendererFor(p).Render(&buf, diag.Source{Name: "<candidate>", Bytes: []byte(src)}, diag.WithCodes(ds))
+	_ = rendererFor(p).Render(&buf, diag.Source{Name: "<candidate>", Bytes: []byte(src)}, diag.WithCodes(ds))
 	return buf.String()
 }
 
